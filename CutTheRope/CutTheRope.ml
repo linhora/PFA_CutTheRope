@@ -8,10 +8,12 @@ let up = 500;;
 let paddle = 100;;
 let thick = 4;;
 
-let ball = 15;;
-let mass = 1;;
+let ball = 30;;
+let mass = 0.001;;
+let bounce= 0.40;;
+let maxVelocity= 15.0;;
 
-open_graph " 900x700"
+open_graph " 900x800"
 ;;
 
 
@@ -26,30 +28,42 @@ let draw_ball x y =
 
 
 let calc_acceleration =
-	(0,-mass)
+	(0.0,-.mass)
 ;;
 
 
 
 let new_speed (vx,vy) (ax,ay) =
-	if(vy > -15)
-		then (vx+ax,vy+ay)
+	if(vy > -.maxVelocity)
+		then (vx+.ax,vy+.ay)
 	else
-		(vx+ax,vy)
+		(vx+.ax,vy+.ay)
 ;;
 
 let new_position (bx,by) (vx,vy) =
-	(bx+vx,by+vy)
+	(bx+.vx,by+.vy)
 ;;
 
-
+(*
 let detect_bounce (bx,by) (vx,vy) =
-	if by-15/2 < 1
-		then (vx,-vy)
+	if by -. float_of_int ball/.2.0 < 1.0
+		then  (vx,(vy*. -.0.8))
 	else
 		(vx,vy)
 ;;
+*)
 
+let abs_f x =
+	if x<0.0
+		then -.x
+	else x
+
+let detect_bounce (bx,by) (vx,vy) =
+	if by -. float_of_int ball <= 0.0
+		then  ((bx+.(vx*.(abs_float (by-.(float_of_int ball))/.vy)),(float_of_int ball)+.((vy*. -.bounce)*.(abs_float (by-.(float_of_int ball))/.vy))),(vx,(vy*. -.bounce)))
+	else
+	((bx,by),(vx,vy))
+;;
 
 
 let rec wait n = 
@@ -62,25 +76,27 @@ let loose y =
 		then exit 0
 ;;
 
-let rec game (x,y) (vx,vy) =
+let rec game ((x,y),(vx,vy)) =
 	Graphics.clear_graph ();
-	draw_ball x y;
-	
-	
-	
-	
-	Printf.printf "x: %d y: %d  p: %d vy: %d \n" x y vx vy;
-	
-	
+	draw_ball (int_of_float x) (int_of_float y);
 	
 	
 	
 	(*loose y;*)
 	
-	wait 7000000;
+	wait 800000;
 	
-	game (new_position (x,y) (detect_bounce (x,y) (new_speed (vx,vy) calc_acceleration))) (detect_bounce (x,y) (new_speed (vx,vy) calc_acceleration))
+	Printf.printf "x: %f y: %f  p: %f vy: %f \n" x y vx vy;
+	
+	
+	game (detect_bounce(new_position (x,y) (new_speed (vx, vy) calc_acceleration)) ((new_speed (vx,vy) calc_acceleration)))
+	
+	(*	
+	game (new_position (x,y) (detect_bounce (x,y) (new_speed (vx, vy) calc_acceleration))) (detect_bounce (x,y) (new_speed (vx,vy) calc_acceleration))
+	*)
 ;;
 
-game (100,400) (0,0);;
+
+
+game ((100.0,400.0),(0.0,0.0));;
 
