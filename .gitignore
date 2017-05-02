@@ -2,3 +2,5 @@
 **/build/
 #ignore unsaved or working files
 **/*~
+#building and compilation files
+**/*.cm*
