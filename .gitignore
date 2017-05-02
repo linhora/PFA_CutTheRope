@@ -1,1 +1,4 @@
-**/build
+#ignore build directory in all directories
+**/build/
+#ignore unsaved or working files
+**/*~
