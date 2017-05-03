@@ -1,5 +1,6 @@
-type balle = {mutable position : float*float;mutable vitesse : float*float;masse : float; taille : float};; 
 
+type balle = {mutable position : float*float;mutable vitesse : float*float;masse : float; taille : float};; 
+  
 let evalForces balle listForces = 
   begin
     let rec evaluation balle = function 
@@ -8,7 +9,7 @@ let evalForces balle listForces =
       |f :: l -> f balle :: evaluation balle l
     in
     evaluation balle listForces 
-end 
+  end 
 let sommeForceX listeForces balle = 
   begin
     let rec sommeX = function 
@@ -17,7 +18,7 @@ let sommeForceX listeForces balle =
     in
     sommeX (evalForces balle listeForces)
   end
-
+    
 let sommeForceY listeForces balle = 
   begin
     let rec sommeY = function
@@ -28,11 +29,12 @@ let sommeForceY listeForces balle =
   end
     
 let nextFrame balle listForces=
-    begin
-      let acceleration = ((sommeForceX listForces balle) /. balle.masse,(sommeForceY listForces balle) /. balle.masse) in
-      let (ax,ay) = acceleration in
-      let (vx,vy) = balle.vitesse in
-      let (x,y) = balle.position in
-      balle.vitesse <- (vx+.ax,vy+.ay);
-      balle.position <- (x+.vx,y+.vy);
-    end
+  begin
+    let acceleration = ((sommeForceX listForces balle) /. balle.masse,(sommeForceY listForces balle) /. balle.masse) in
+    let (ax,ay) = acceleration in
+    let (vx,vy) = balle.vitesse in
+    let (x,y) = balle.position in
+    balle.vitesse <- (vx+.ax,vy+.ay);
+    balle.position <- (x+.vx,y+.vy);
+  end
+
