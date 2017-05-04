@@ -107,7 +107,8 @@ let isCordeTendue balle corde =
 ;;
 
 let calculForceCorde corde balle forcesActuelles =
-  let (fx,fy) = (sommeForceX forcesActuelles balle, sommeForceY forcesActuelles balle) in
+  let forcesCalcules = evalForces balle forcesActuelles in
+  let (fx,fy) = (sommeForceX forcesCalcules, sommeForceY forcesCalcules) in
   let (bx,by) = balle.position in
   let (cx,cy) = corde.origine in
   let coteAdj = (abs_float (bx-.cx))in
