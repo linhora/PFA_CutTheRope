@@ -26,33 +26,27 @@ let evalForces balle listForces =
     in
     evaluation balle listForces 
 end ;;
-let sommeForceX listeForces balle = 
-  begin
-    let rec sommeX = function 
-      |[]->0.0
-      |(x,_)::l->x +. sommeX l
-    in
-    sommeX (evalForces balle listeForces)
-  end;;
+let rec sommeForceX forcesCalcules  = 
+  match forcesCalcules with  
+  |[]->0.0
+  |(x,_)::l->x +. sommeForceX l
+;;
 
-let sommeForceY listeForces balle = 
-  begin
-    let rec sommeY = function
-      |[]->0.0
-      |(_,y)::l->y+.sommeY l
-    in
-    sommeY (evalForces balle listeForces)
-  end;;
+let rec sommeForceY forcesCalcules = 
+  match forcesCalcules with
+  |[]->0.0
+  |(_,y)::l->y+.sommeForceY l
+;;
     
-let nextFrame balle listForces=
-    begin
-      let acceleration = ((sommeForceX listForces balle) /. balle.masse,(sommeForceY listForces balle) /. balle.masse) in
-      let (ax,ay) = acceleration in
-      let (vx,vy) = balle.vitesse in
-      let (x,y) = balle.position in
-      balle.vitesse <- (vx+.ax,vy+.ay);
-      balle.position <- (x+.vx,y+.vy);
-    end;;
+let nextFrame balle listForces =
+  let forcesCalcules = evalForces balle listForces in
+  let acceleration = ((sommeForceX forcesCalcules) /. balle.masse,(sommeForceY forcesCalcules) /. balle.masse) in
+  let (ax,ay) = acceleration in
+  let (vx,vy) = balle.vitesse in
+  let (x,y) = balle.position in
+  balle.vitesse <- (vx+.ax,vy+.ay);
+  balle.position <- (x+.vx,y+.vy);
+;;
 
 
 
