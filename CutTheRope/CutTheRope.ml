@@ -159,18 +159,57 @@ let drawCorde corde balle =
       let h = u-.p in
       let v = w-.q in
       let c1 = v/.corde.longueur in
-      let c2 = (copysign 1.0 c1)*.sqrt ((c1**2.0)/.(1.-.c1**2.)) in
+      let c2 = (copysign 1.0 c1)*.(sqrt ((c1**2.0)/.(1.-.c1**2.))) in
       let f1 = (fun a -> v-.2.*.a*.c2*.(sinh (h/.(2.*.a)))) in
       let f2 = (fun a -> corde.longueur -. 2.*.a*.sinh(h/.(2.*.a))) in
       (*Printf.printf "f1(a) %f f1(b) %f \n" (f1 (10.0**(-10.0))) (f1 600.) ;*)
       if q<>w then (
 	let a = Root1D.brent (f1) (10.0**(-20.0)) 2000.0 in
-	Printf.printf "a %f \n" a ;)
-      else
+	Printf.printf "a %f \n" a ;
+	let f3 = (fun x0 -> v -.a*.((cosh ((w-.x0)/.a))-.(cosh ((u-.x0)/.a)))) in
+	let x0 = Root1D.brent (f3) (-.2000.) 2000.0 in
+	Printf.printf "x0 %f \n" x0 ;
+	let f4 = (fun () -> w -. (a *. (cosh ((u-.x0)/.a)))+.a) in
+	let f5 = (fun () -> q -. (a *. (cosh ((p-.x0)/.a)))+.a) in
+	let y0 = f5 () in
+	let y0alt = f4 () in
+	Printf.printf "y0 %f \n" y0 ;
+	let f = (fun x -> (a*. (cosh ((x-.x0)/.a)))+.(y0-.a)) in
+	let symetrie y =
+	  y-.0.*.(y-.q)
+	in
+	let rec drawSegment (xo,yo) =
+	  if (xo=u) then Graphics.lineto (int_of_float xo) (int_of_float yo)
+	  else (
+	    Graphics.lineto (int_of_float xo) (int_of_float yo);
+	    drawSegment (xo+.1.,symetrie (f (xo+.1.)))
+	  )	 
+	in
+	Graphics.moveto (int_of_float p) (int_of_float q);
+	drawSegment (p+.1.,f (p+.1.)) ;
+      )
+      else (
 	let a = Root1D.brent (f2) (10.0**(-20.0)) 2000.0 in
 	Printf.printf "a %f \n" a ; 
-    ) 
+	(*let f3 = (fun x0 -> v -.a*.((cosh ((w-.x0)/.a))-.(cosh ((u-.x0)/.a)))) in *)
+	let x0 = (u-.p)/.2. in
+	Printf.printf "x0 %f \n" x0 ;
+	let f4 = (fun () -> q -. (a *. (cosh ((p-.x0)/.a)))+.a) in
+	let y0 = f4 () in
+	Printf.printf "y0 %f \n" y0 ;
+	let f = (fun x -> (a*. (cosh (x-.x0)/.a))+.(y0-.a)-.v) in
+	let rec drawSegment (xo,yo) =
+	  if (xo=u) then Graphics.lineto (int_of_float xo) (int_of_float yo)
+	  else (
+	    Graphics.lineto (int_of_float xo) (int_of_float yo);
+	    drawSegment (xo+.1.,f (xo+.1.)))
+	in
+	Graphics.moveto (int_of_float p) (int_of_float q);
+	drawSegment (p+.1.,f (p+.1.));
+      ) 
+    )
   )
+	 
 ;;
     
 (*
@@ -232,11 +271,11 @@ let rec wait n =
 ;;
 
 
-let bob= {id = 1 ; pos = (200.0,10.0) ; contact =  (fun balle (x,y) -> (((snd balle.position)-.30.0<y) && (((fst balle.position)> x-.50.0)&&((fst balle.position)<x+.50.0))))  ; force = (fun balle -> (balle.position <- (fst balle.position,(snd balle.position)+.(-.snd balle.vitesse))) ;(0.0,(-.2.0)*.(snd balle.vitesse))); draw = (fun (x,y)-> (draw_rect ((int_of_float x)-50) (int_of_float y) 100 2))};;
+let bob= {id = 1 ; pos = (200.0,10.0) ; contact =  (fun balle (x,y) -> (((snd balle.position)-.30.0<y) && (((fst balle.position)> x-.50.0)&&((fst balle.position)<x+.50.0))))  ; force = (fun balle -> (balle.position <- (fst balle.position,(snd balle.position)+.(-.snd balle.vitesse*.2.))) ;(0.0,(-.2.0)*.(snd balle.vitesse))); draw = (fun (x,y)-> (draw_rect ((int_of_float x)-50) (int_of_float y) 100 2))};;
 
 let gravite= {id = 0 ; pos = (-.1.0,-.1.0) ; contact = (fun balle (x,y) ->true) ; force = (fun balle -> (0.0,-.0.001)); draw = (fun (x,y)-> ())};;
 
-let listeDeProps = [gravite];;
+let listeDeProps = [bob;gravite];;
 
 
 let cordeNo1 = {origine = (120.0,100.0); longueur = 100.0; state = 1};;
@@ -275,6 +314,6 @@ let rec game balle =
 ;;
 
 
-game {position=(200.0,150.0);vitesse=(0.0,-0.05);masse=1.0;taille=ball};;
+game {position=(200.0,200.0);vitesse=(0.0,-0.05);masse=1.0;taille=ball};;
 
 
