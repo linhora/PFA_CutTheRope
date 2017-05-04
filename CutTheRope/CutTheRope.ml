@@ -1,17 +1,23 @@
-open Graphics;; 
+open Root1D;;
+open Graphics;;
+  
+  
 
-let ball = 30;;
+let ball = 15;;
 let mass = 0.005;;
 let bounce= 0.7;;
 let maxVelocity= 15.0;;
-
+  
 open_graph " 900x800"
 ;;
-
+  
 Graphics.auto_synchronize false
 ;;
-
-
+  
+Graphics.set_line_width 2
+;;
+Graphics.set_color black
+;;
 
 type balle = {mutable position : float*float;mutable vitesse : float*float;masse : float; taille : int};; 
 
@@ -118,32 +124,70 @@ let calculForceCorde corde balle forcesActuelles =
   fun balle -> (fx*.cosAngle,fy*.sinAngle)
 ;;
 
-
+(*
 (* rs représente le point le plus a gauche, u v le plus a droite*)
 let calculConstanteCat (r,s) (u,v) longueur = 			   
   let rec solveZ z =
-    (*Printf.printf "TEST z: %f \n" z ;*)
-    if ((sinh z )/. z >= sqrt((longueur**2.0)-.(v-.s)**2.0)/.(u-.r)) then z
-    else solveZ (z+.0.001)
+    Printf.printf " sinh z/z: %f \n" ((sinh z )/. z) ;
+    Printf.printf " compared  :  %f \n" (sqrt ((longueur*.longueur)-.(v-.s)*.(v-.s))/.(u-.r));
+    if ((sinh z )/. z >= sqrt ((longueur*.longueur)-.(v-.s)*.(v-.s))/.(u-.r)) then z
+    else solveZ (z+.0.01)
   in
   solveZ 0.0
 ;;
-
+  *)
+let drawLine (ax,ay) (bx,by) =
+  Printf.printf "Line call\n";
+  Graphics.moveto (int_of_float ax) (int_of_float ay);
+  Graphics.lineto (int_of_float bx) (int_of_float by); 
+;;
+  
 let drawCorde corde balle =
-  let (cx,cy) = corde.origine in
-  let (bx,by) = balle.position in
-  let (r,s) = if (cx<bx) then (cx,cy) else (bx,by) in
-  let (u,v) = if (cx>=bx) then (cx,cy) else (bx,by) in					     
-  let z = calculConstanteCat (r,s) (u,v) corde.longueur in
-  let a = (u-.r)/.2.0/.z in
-  let p = (r+.u-.a*. (log ((corde.longueur +.v-.s)/.(corde.longueur -.v+.s))) )/.2.0 in
-  let q = (v+.s-.corde.longueur*.(sinh z))/.2.0 in
-  for x = (int_of_float r)+1 to (int_of_float u)-1 do
-    fill_circle x (int_of_float (a*.cosh ((float_of_int x-.p)/.a)+.q)) 1
-  done
+  Printf.printf "Draw call\n";
+  let (x1,y1) = corde.origine in
+  let (x2,y2) = balle.position in
+  let (cx,cy) = (x1,y1) in
+  let (bx,by) = (x2,y2) in
+  let (p,q) = if (cx<bx) then (cx,cy) else (bx,by) in
+  let (u,w) = if (cx>=bx) then (cx,cy) else (bx,by) in
+  Printf.printf "l carre %f \n" (corde.longueur**2.);
+  Printf.printf "dist carre %f \n" ((p-.u)**2. +. (q-.w)**2.);
+  if corde.longueur**2. < ((p-.u)**2. +. (q-.w)**2.) then (drawLine (cx,cy) (bx,by);)
+  else (
+    if bx=cx then drawLine (cx,cy) (bx,by)
+    else (
+      let h = u-.p in
+      let v = w-.q in
+      let c1 = v/.corde.longueur in
+      let c2 = (copysign 1.0 c1)*.sqrt ((c1**2.0)/.(1.-.c1**2.)) in
+      let f1 = (fun a -> v-.2.*.a*.c2*.(sinh (h/.(2.*.a)))) in
+      let f2 = (fun a -> corde.longueur -. 2.*.a*.sinh(h/.(2.*.a))) in
+      (*Printf.printf "f1(a) %f f1(b) %f \n" (f1 (10.0**(-10.0))) (f1 600.) ;*)
+      if q<>w then (
+	let a = Root1D.brent (f1) (10.0**(-20.0)) 2000.0 in
+	Printf.printf "a %f \n" a ;)
+      else
+	let a = Root1D.brent (f2) (10.0**(-20.0)) 2000.0 in
+	Printf.printf "a %f \n" a ; 
+    ) 
+  )
 ;;
     
-
+(*
+    Printf.printf "0 r:%f s:%f u:%f v:%f l:%f" r s u v corde.longueur;
+    let z = calculConstanteCat (r,s) (u,v) corde.longueur in
+    Printf.printf "1";
+    let a = (u-.r)/.2.0/.z in
+    Printf.printf "2";
+    let p = (r+.u-.a*. (log ((corde.longueur +.v-.s)/.(corde.longueur -.v+.s))) )/.2.0 in
+    Printf.printf "3";
+    let q = (v+.s-.corde.longueur*.(sinh z))/.2.0 in
+    Printf.printf "4";
+    for x = (int_of_float r)+1 to (int_of_float u)-1 do (
+      Printf.printf "";
+      fill_circle x (int_of_float (a*.cosh ((float_of_int x-.p)/.a)+.q)) 2 ;
+      Printf.printf "";)
+    done *)
 
 
 
@@ -192,36 +236,37 @@ let bob= {id = 1 ; pos = (200.0,10.0) ; contact =  (fun balle (x,y) -> (((snd ba
 
 let gravite= {id = 0 ; pos = (-.1.0,-.1.0) ; contact = (fun balle (x,y) ->true) ; force = (fun balle -> (0.0,-.0.001)); draw = (fun (x,y)-> ())};;
 
-let listeDeProps = [bob;gravite];;
+let listeDeProps = [gravite];;
 
 
-let cordeNo1 = {origine = (200.0,200.0); longueur = 100.0; state = 1};;
+let cordeNo1 = {origine = (120.0,100.0); longueur = 100.0; state = 1};;
 
 let rec game balle =
 
 	Graphics.clear_graph ();
 	
 	
-	if(isCordeTendue balle cordeNo1)
+	(*if(isCordeTendue balle cordeNo1)
 		then
 			nextFrame balle ((calculForceCorde cordeNo1 balle (get_list_force listeDeProps balle))::(get_list_force listeDeProps balle)  )
-	else
+	else *)
 		nextFrame balle (get_list_force listeDeProps balle);
 	
 	let(x,y) = balle.position in 
 	let(vx,vy) = balle.vitesse in 
-	
+	let(cx,cy) = cordeNo1.origine in
+	draw_ball (int_of_float cx) (int_of_float cy) 1;
 	draw_props listeDeProps;
 	
 	draw_ball (int_of_float x) (int_of_float y) ( balle.taille);
 	
-	(*drawCorde cordeNo1 balle;*)
+	drawCorde cordeNo1 balle;
 	
 	
 	wait 500000;
 	
 	
-	Printf.printf "BEF y: %f vy : %f  \n" y vy ;
+	Printf.printf "\n BEF y: %f vy : %f  \n" y vy ;
 
 
 	
@@ -230,6 +275,6 @@ let rec game balle =
 ;;
 
 
-game {position=(250.0,200.0);vitesse=(0.0,-0.05);masse=1.0;taille=ball};;
+game {position=(200.0,150.0);vitesse=(0.0,-0.05);masse=1.0;taille=ball};;
 
 
