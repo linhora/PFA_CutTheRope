@@ -159,30 +159,28 @@ let drawCorde corde balle =
       let h = u-.p in
       let v = w-.q in
       let c1 = v/.corde.longueur in
-      let c2 = (copysign 1.0 c1)*.(sqrt ((c1**2.0)/.(1.-.c1**2.))) in
+      Printf.printf "signe c2 %f \n" (copysign 1.0 c1) ;
+      let c2 = (copysign 1.0 c1)*.(sqrt ((c1*.c1)/.(1.-.c1*.c1))) in
       let f1 = (fun a -> v-.2.*.a*.c2*.(sinh (h/.(2.*.a)))) in
-      let f2 = (fun a -> corde.longueur -. 2.*.a*.sinh(h/.(2.*.a))) in
+      let f2 = (fun a -> corde.longueur-.2.*.a*.sinh(h/.(2.*.a))) in
       (*Printf.printf "f1(a) %f f1(b) %f \n" (f1 (10.0**(-10.0))) (f1 600.) ;*)
       if q<>w then (
 	let a = Root1D.brent (f1) (10.0**(-20.0)) 2000.0 in
 	Printf.printf "a %f \n" a ;
-	let f3 = (fun x0 -> v -.a*.((cosh ((w-.x0)/.a))-.(cosh ((u-.x0)/.a)))) in
-	let x0 = Root1D.brent (f3) (-.2000.) 2000.0 in
+	let f3 = (fun x0 -> v-.a*.((cosh ((w-.x0)/.a))-.(cosh ((u-.x0)/.a)))) in
+	let x0 = Root1D.brent (f3) (-.1000.) 1000.0 in
 	Printf.printf "x0 %f \n" x0 ;
 	let f4 = (fun () -> w -. (a *. (cosh ((u-.x0)/.a)))+.a) in
 	let f5 = (fun () -> q -. (a *. (cosh ((p-.x0)/.a)))+.a) in
 	let y0 = f5 () in
 	let y0alt = f4 () in
 	Printf.printf "y0 %f \n" y0 ;
-	let f = (fun x -> (a*. (cosh ((x-.x0)/.a)))+.(y0-.a)) in
-	let symetrie y =
-	  y-.0.*.(y-.q)
-	in
+	let f = (fun x->(a*.(cosh ((x-.x0)/.a)))+.(y0alt-.a)) in
 	let rec drawSegment (xo,yo) =
 	  if (xo=u) then Graphics.lineto (int_of_float xo) (int_of_float yo)
 	  else (
 	    Graphics.lineto (int_of_float xo) (int_of_float yo);
-	    drawSegment (xo+.1.,symetrie (f (xo+.1.)))
+	    drawSegment (xo+.1.,f (xo+.1.))
 	  )	 
 	in
 	Graphics.moveto (int_of_float p) (int_of_float q);
@@ -211,7 +209,45 @@ let drawCorde corde balle =
   )
 	 
 ;;
-    
+
+let drawCordeAlt corde balle =
+  Printf.printf "Draw call\n";
+  let (x1,y1) = corde.origine in
+  let (x2,y2) = balle.position in
+  let (cx,cy) = (x1,y1) in
+  let (bx,by) = (x2,y2) in
+  let (r,s) = if (cx<bx) then (cx,cy) else (bx,by) in
+  let (u,w) = if (cx>=bx) then (cx,cy) else (bx,by) in
+  if corde.longueur**2. < ((r-.u)**2. +. (s-.w)**2.) then (drawLine (cx,cy) (bx,by);)
+  else (
+    if bx=cx then drawLine (cx,cy) (bx,by)
+    else (
+      let rec solveZ z =
+        if ((sinh z )/.z)>=((sqrt (corde.longueur*.corde.longueur-.(w-.s)*.(w-.s)))/.(u-.r))
+        then z
+        else solveZ (z+.0.001)
+      in
+      let z = solveZ 0.001 in
+      Printf.printf "z %f" z;
+      let a = (u-.r)/.2./.z in
+      let p = (r+.u-.a*.log ((corde.longueur+.w-.s)/.(corde.longueur-.w+.s)))/.2. in
+      let q = (w+.s-.corde.longueur*.(cosh z)/.(sinh z))/.2. in
+      let rec drawSegment x y =
+        if (x=u) then (Graphics.lineto (int_of_float x) (int_of_float y);())
+	else (
+	  Graphics.lineto (int_of_float x) (int_of_float y);
+	  drawSegment (x+.1.) ((a*.(cosh ((x-.p)/.a) ))+.q);
+        )
+      in
+      Graphics.moveto (int_of_float r) (int_of_float s);
+      drawSegment r s
+    )
+  )
+;;
+  
+
+
+  
 (*
     Printf.printf "0 r:%f s:%f u:%f v:%f l:%f" r s u v corde.longueur;
     let z = calculConstanteCat (r,s) (u,v) corde.longueur in
@@ -299,7 +335,7 @@ let rec game balle =
 	
 	draw_ball (int_of_float x) (int_of_float y) ( balle.taille);
 	
-	drawCorde cordeNo1 balle;
+	drawCordeAlt cordeNo1 balle;
 	
 	
 	wait 500000;
