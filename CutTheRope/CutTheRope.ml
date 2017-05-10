@@ -275,6 +275,7 @@ let cordeNo2 = {origine = (120.,210.); longueur = 85.;state = 0};;
 exception End;;
 
 let exeThread () =
+  Format.printf "Thread lancé\n@.";
   let traitementKeyP key =
     if key = 'q' then
       raise End
@@ -314,7 +315,7 @@ let exeThread () =
             let (x1,y1) = (float_of_int s.Graphics.mouse_x,float_of_int s.Graphics.mouse_y) in
             Printf.printf "waiting clic out";
             let s2 = Graphics.wait_next_event [Graphics.Button_up] in
-            let (x2,y2) = (float_of_int s.Graphics.mouse_x,float_of_int s.Graphics.mouse_y) in
+            let (x2,y2) = (float_of_int s2.Graphics.mouse_x,float_of_int s2.Graphics.mouse_y) in
             detecterCut x1 y1 x2 y2 cordeNo1;
             detecterCut x1 y1 x2 y2 cordeNo2;
           )
@@ -341,8 +342,7 @@ let rec game balle =
   let liste1 = ajoutForceCorde cordeNo1 balle liste in
   let liste2 = ajoutForceCorde cordeNo2 balle liste1 in
   nextFrame balle liste2;
-  let(x,y) = balle.position in 
-  let(vx,vy) = balle.vitesse in 
+  let(x,y) = balle.position in  
   let(cx,cy) = cordeNo1.origine in
   draw_ball (int_of_float cx) (int_of_float cy) 1;
   draw_props listeDeProps;
@@ -352,14 +352,15 @@ let rec game balle =
   affichageCorde cordeNo2 balle;
   
   
-  wait 100000;
+  wait 500000;
   try  
     (*Printf.printf "\n BEF y: %f vy : %f  \n" y vy ;*)
-    Mutex.try_lock m;
-    if sharedCut.isOver then
-      raise End;
-    Mutex.unlock m;
-    game balle
+    if(Mutex.try_lock m) then(
+      if sharedCut.isOver then
+        raise End;
+      Mutex.unlock m;
+      game balle
+    )
   with
     End -> ();
            
