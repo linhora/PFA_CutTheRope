@@ -112,7 +112,7 @@ let isCordeTendue balle corde =
   sqrt ((bx-.cx)**2.0+.(by-.cy)**2.0) >= corde.longueur
 ;;
 
-let calculForceCorde corde balle forcesActuelles =
+let calculForceCorde corde balle =
   if corde.state = 1 then
     (
       (*let forcesCalcules = evalForces balle forcesActuelles in
@@ -132,7 +132,7 @@ let calculForceCorde corde balle forcesActuelles =
       let r = corde.longueur in
       let (vx,vy)= balle.vitesse in
       let cLen=sqrt ((cx-.bx)**2.+.(cy-.by)**2.) in
-      let k = 0.5 in(*
+      let k = 0.6 in(*
       balle.position<-((fst balle.position)+.1.*.dx/.r,(snd balle.position)+.1.*.dy/.r);*)
       fun balle -> (((dx/.r)*.(r-.cLen)*.(-.k))-.k*.1.5*.vx,((dy/.r)*.(r-.cLen)*.(-.k))-.k*.1.5*.vy)
     )
@@ -274,14 +274,19 @@ let listeDeProps = [gravite];;
 
 
 let cordeNo1 = {origine = (200.0,200.0); longueur = 85.0; state = 0};;
-
+let cordeNo2 = {origine = (120.,210.); longueur = 85.;state = 0};;
 let rec game balle =
 
   Graphics.clear_graph ();
   checkCordeState cordeNo1 balle;
+  checkCordeState cordeNo2 balle;
   if(isCordeTendue balle cordeNo1)
   then
-    nextFrame balle ((calculForceCorde cordeNo1 balle (get_list_force listeDeProps balle))::(get_list_force listeDeProps balle)  )
+    if (isCordeTendue balle cordeNo2)
+    then
+      nextFrame balle ((calculForceCorde cordeNo1 balle)::(calculForceCorde cordeNo2 balle)::(get_list_force listeDeProps balle))
+    else
+      nextFrame balle ((calculForceCorde cordeNo1 balle)::(get_list_force listeDeProps balle))
   else 
     nextFrame balle (get_list_force listeDeProps balle);
   
@@ -293,9 +298,10 @@ let rec game balle =
   
   draw_ball (int_of_float x) (int_of_float y) ( balle.taille);
   affichageCorde cordeNo1 balle;
+  affichageCorde cordeNo2 balle;
   
   
-  wait 200000;
+  wait 700000;
   
   
   (*Printf.printf "\n BEF y: %f vy : %f  \n" y vy ;*)
