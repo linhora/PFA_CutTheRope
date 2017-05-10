@@ -126,6 +126,7 @@ let calculForceCorde corde balle forcesActuelles =
   let angle = acos cosAngle in
   
   let sinAngle = sin angle in
+  
   Printf.printf "\n TEST||1|11||| coteAdj: %f cosangle: %f angle: %f sinAngle: %f  \n" coteAdj cosAngle angle sinAngle ;
   Printf.printf "\n TEST||2|11||| vx: %f vy: %f   \n" (((cosAngle*.((snd balle.vitesse)+.(fst balle.vitesse))))) ((-.sinAngle*.((snd balle.vitesse)+.(fst balle.vitesse))));
   fun balle -> (((cosAngle*.((snd balle.vitesse)+.(fst balle.vitesse)))),(-.sinAngle*.((snd balle.vitesse)+.(fst balle.vitesse))))  

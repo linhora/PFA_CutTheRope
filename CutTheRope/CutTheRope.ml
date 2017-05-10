@@ -115,15 +115,27 @@ let isCordeTendue balle corde =
 let calculForceCorde corde balle forcesActuelles =
   if corde.state = 1 then
     (
-      let forcesCalcules = evalForces balle forcesActuelles in
+      (*let forcesCalcules = evalForces balle forcesActuelles in
       let (fx,fy) = (sommeForceX forcesCalcules, sommeForceY forcesCalcules) in
       let (bx,by) = balle.position in
       let (cx,cy) = corde.origine in
       let coteAdj = (bx-.cx) in
       let cosAngle = coteAdj/.corde.longueur in
       let angle = acos cosAngle in
+      let sinAngle = sin angle in
       let projectionLocalX = (fx/.(cos angle)+.fy/.(sin angle)) in
-      fun balle -> (-.projectionLocalX/.(cos angle),-.projectionLocalX/.(sin angle)))
+     (* fun balle -> (-.projectionLocalX/.(cos angle),-.projectionLocalX/.(sin angle)))*)
+  fun balle -> ((((sinAngle)*.(snd balle.vitesse))+.((cosAngle)*.(fst balle.vitesse))-.(cosAngle)*.projectionLocalX),(-.sinAngle*.((snd balle.vitesse)+.(fst balle.vitesse)-.projectionLocalX))))*)
+      let (bx,by) = balle.position in
+      let (cx,cy) = corde.origine in
+      let (dx,dy)=(cx-.bx,cy-.by) in
+      let r = corde.longueur in
+      let (vx,vy)= balle.vitesse in
+      let cLen=sqrt ((cx-.bx)**2.+.(cy-.by)**2.) in
+      let k = 0.5 in(*
+      balle.position<-((fst balle.position)+.1.*.dx/.r,(snd balle.position)+.1.*.dy/.r);*)
+      fun balle -> (((dx/.r)*.(r-.cLen)*.(-.k))-.k*.1.5*.vx,((dy/.r)*.(r-.cLen)*.(-.k))-.k*.1.5*.vy)
+    )
   else
     fun balle -> (0.,0.)
 ;;
@@ -157,16 +169,17 @@ let drawCorde corde balle =
       let p = (r+.u-.a*.log ((corde.longueur+.w-.s)/.(corde.longueur-.w+.s)))/.2. in
       let q = (w+.s-.corde.longueur*.(cosh z)/.(sinh z))/.2. in
       let rec drawSegment x y =
-        if (x=u) then (Graphics.lineto (int_of_float x) (int_of_float y);())
+        if (floor x=floor u) then (Graphics.lineto (int_of_float x) (int_of_float y);())
 	else (
 	  Graphics.lineto (int_of_float x) (int_of_float y);
 	  drawSegment (x+.1.) ((a*.(cosh ((x-.p)/.a) ))+.q);
         )
       in
       Graphics.moveto (int_of_float r) (int_of_float s);
-      drawSegment r s
+      drawSegment r s;
     )
   )
+         
 ;;
   
 
@@ -255,7 +268,7 @@ let rec wait n =
 
 let bob= {id = 1 ; pos = (200.0,10.0) ; contact =  (fun balle (x,y) -> (((snd balle.position)-.30.0<y) && (((fst balle.position)> x-.50.0)&&((fst balle.position)<x+.50.0))))  ; force = (fun balle -> (balle.position <- (fst balle.position,(snd balle.position)+.(-.snd balle.vitesse*.2.))) ;(0.0,(-.2.0)*.(snd balle.vitesse))); draw = (fun (x,y)-> (draw_rect ((int_of_float x)-50) (int_of_float y) 100 2))};;
 
-let gravite= {id = 0 ; pos = (-.1.0,-.1.0) ; contact = (fun balle (x,y) ->true) ; force = (fun balle -> (0.0,-.0.001)); draw = (fun (x,y)-> ())};;
+let gravite= {id = 0 ; pos = (-.1.0,-.1.0) ; contact = (fun balle (x,y) ->true) ; force = (fun balle -> (0.0,-.0.005)); draw = (fun (x,y)-> ())};;
 
 let listeDeProps = [gravite];;
 
@@ -282,7 +295,7 @@ let rec game balle =
   affichageCorde cordeNo1 balle;
   
   
-  wait 1000000;
+  wait 200000;
   
   
   (*Printf.printf "\n BEF y: %f vy : %f  \n" y vy ;*)
