@@ -1,2 +1,4 @@
 compile :
-	ocamlc -c -o CutTheRope graphics.cma CutTheRope.ml
+	ocamlc -thread -o CutTheRope graphics.cma unix.cma threads.cma CutTheRope.ml
+run : compile
+	./CutTheRope

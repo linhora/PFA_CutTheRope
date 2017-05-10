@@ -1,6 +1,6 @@
 open Graphics;;
-open Unix;;  
-  
+open Unix;;
+open Mutex;;
 
 let ball = 15;;
 let mass = 0.005;;
@@ -259,35 +259,55 @@ let ajoutForceCorde corde balle liste=
   else
     liste
 ;;
-  
+type infoShared = {mutable isCut: bool;mutable isOver : bool};;  
 
 let bob= {id = 1 ; pos = (200.0,10.0) ; contact =  (fun balle (x,y) -> (((snd balle.position)-.30.0<y) && (((fst balle.position)> x-.50.0)&&((fst balle.position)<x+.50.0))))  ; force = (fun balle -> (balle.position <- (fst balle.position,(snd balle.position)+.(-.snd balle.vitesse*.2.))) ;(0.0,(-.2.0)*.(snd balle.vitesse))); draw = (fun (x,y)-> (draw_rect ((int_of_float x)-50) (int_of_float y) 100 2))};;
 
 let gravite= {id = 0 ; pos = (-.1.0,-.1.0) ; contact = (fun balle (x,y) ->true) ; force = (fun balle -> (0.0,-.0.005)); draw = (fun (x,y)-> ())};;
 
 let listeDeProps = [gravite];;
-
-
+let sharedCut =  {isCut=false;isOver=false};;
+let m = Mutex.create ();;
 let cordeNo1 = {origine = (200.0,200.0); longueur = 85.0; state = 0};;
 let cordeNo2 = {origine = (120.,210.); longueur = 85.;state = 0};;
-let rec game balle =
 
+exception End;;
+
+let exeThread () =
+  let traitementKeyP key =
+    if key = 'q' then
+      raise End
+  in
+  try
+    while true do
+      try
+        let s = Graphics.wait_next_event [Graphics.Button_down;Graphics.Key_pressed] in
+        if (s.Graphics.keypressed) then (traitementKeyP s.Graphics.key)
+        else
+          if s.Graphics.button
+          then ()
+      with
+        End -> raise End
+       |e -> Printf.printf "exception non traitée levée"
+    done
+  with
+    End -> (Mutex.lock m;
+            sharedCut.isOver <- true;
+           Mutex.unlock m)
+  
+;;
+  
+  
+  
+let t = Thread.create (exeThread) ();;
+
+let rec game balle =
   Graphics.clear_graph ();
   checkCordeState cordeNo1 balle;
   checkCordeState cordeNo2 balle;
   let liste = get_list_force listeDeProps balle in
   let liste1 = ajoutForceCorde cordeNo1 balle liste in
   let liste2 = ajoutForceCorde cordeNo2 balle liste1 in
-  (*if(isCordeTendue balle cordeNo1)
-  then
-    if (isCordeTendue balle cordeNo2)
-    then
-      nextFrame balle ((calculForceCorde cordeNo2 balle)::(calculForceCorde cordeNo1 balle)::(get_list_force listeDeProps balle))
-    else
-      nextFrame balle ((calculForceCorde cordeNo1 balle)::(get_list_force listeDeProps balle))
-  else 
-    nextFrame balle (get_list_force listeDeProps balle);
-   *)
   nextFrame balle liste2;
   let(x,y) = balle.position in 
   let(vx,vy) = balle.vitesse in 
@@ -301,14 +321,16 @@ let rec game balle =
   
   
   wait 700000;
-  
-  
-  (*Printf.printf "\n BEF y: %f vy : %f  \n" y vy ;*)
-  
-  
-  
-  game balle
-       
+  try  
+    (*Printf.printf "\n BEF y: %f vy : %f  \n" y vy ;*)
+    Mutex.try_lock m;
+    if sharedCut.isOver then
+      raise End;
+    Mutex.unlock m;
+    game balle
+  with
+    End -> ();
+           
 ;;
 
 
