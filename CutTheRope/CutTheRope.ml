@@ -1,6 +1,5 @@
 open Graphics;;
 open Unix;;
-open Mutex;;
 
 let ball = 15;;
 let mass = 0.005;;
@@ -259,17 +258,17 @@ let ajoutForceCorde corde balle liste=
   else
     liste
 ;;
-type infoShared = {mutable isCut: bool;mutable isOver : bool};;  
+type infoShared = {mutable isClick: bool;mutable isOver : bool;mutable clickOrigine : int * int;mutable clickActuel : int * int};;  
 
 let bob= {id = 1 ; pos = (200.0,10.0) ; contact =  (fun balle (x,y) -> (((snd balle.position)-.30.0<y) && (((fst balle.position)> x-.50.0)&&((fst balle.position)<x+.50.0))))  ; force = (fun balle -> (balle.position <- (fst balle.position,(snd balle.position)+.(-.snd balle.vitesse*.2.))) ;(0.0,(-.2.0)*.(snd balle.vitesse))); draw = (fun (x,y)-> (draw_rect ((int_of_float x)-50) (int_of_float y) 100 2))};;
 
 let gravite= {id = 0 ; pos = (-.1.0,-.1.0) ; contact = (fun balle (x,y) ->true) ; force = (fun balle -> (0.0,-.0.005)); draw = (fun (x,y)-> ())};;
 
-let balle =  {position=(150.0,300.0);vitesse=(0.0,-0.05);masse=1.0;taille=ball};;
+let balle =  {position=(150.0,300.0);vitesse=(0.0,-0.0);masse=1.0;taille=ball};;
 let listeDeProps = [gravite];;
-let sharedCut =  {isCut=false;isOver=false};;
-let cordeNo1 = {origine = (200.0,200.0); longueur = 85.0; state = 0};;
-let cordeNo2 = {origine = (120.,210.); longueur = 85.;state = 0};;
+let sharedCut =  {isClick=false;isOver=false;clickOrigine = (0,0);clickActuel = (0,0)};;
+let cordeNo1 = {origine = (300.0,300.0); longueur = 170.0; state = 0};;
+let cordeNo2 = {origine = (00.,00.); longueur = 85.;state = 0};;
 
 exception End;;
 (*
@@ -352,7 +351,12 @@ let rec game balle =
       if c = 'q' then
         sharedCut.isOver <- true
     );
-  
+  if (!sharedCut.isClick) then
+    if (Graphics.button_down()) then
+      (sharedCut.isClick <- true;
+      sharedCut.clickOrigine<- Graphics.mouse_pos());
+  if (sharedCut.isClick && 
+                             
   
 (*  let _ = Unix.select [] [] [] 0.1 in*)wait 500000;
   try  
