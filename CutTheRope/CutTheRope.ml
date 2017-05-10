@@ -115,26 +115,14 @@ let isCordeTendue balle corde =
 let calculForceCorde corde balle =
   if corde.state = 1 then
     (
-      (*let forcesCalcules = evalForces balle forcesActuelles in
-      let (fx,fy) = (sommeForceX forcesCalcules, sommeForceY forcesCalcules) in
-      let (bx,by) = balle.position in
-      let (cx,cy) = corde.origine in
-      let coteAdj = (bx-.cx) in
-      let cosAngle = coteAdj/.corde.longueur in
-      let angle = acos cosAngle in
-      let sinAngle = sin angle in
-      let projectionLocalX = (fx/.(cos angle)+.fy/.(sin angle)) in
-     (* fun balle -> (-.projectionLocalX/.(cos angle),-.projectionLocalX/.(sin angle)))*)
-  fun balle -> ((((sinAngle)*.(snd balle.vitesse))+.((cosAngle)*.(fst balle.vitesse))-.(cosAngle)*.projectionLocalX),(-.sinAngle*.((snd balle.vitesse)+.(fst balle.vitesse)-.projectionLocalX))))*)
       let (bx,by) = balle.position in
       let (cx,cy) = corde.origine in
       let (dx,dy)=(cx-.bx,cy-.by) in
       let r = corde.longueur in
       let (vx,vy)= balle.vitesse in
       let cLen=sqrt ((cx-.bx)**2.+.(cy-.by)**2.) in
-      let k = 0.6 in(*
-      balle.position<-((fst balle.position)+.1.*.dx/.r,(snd balle.position)+.1.*.dy/.r);*)
-      fun balle -> (((dx/.r)*.(r-.cLen)*.(-.k))-.k*.1.5*.vx,((dy/.r)*.(r-.cLen)*.(-.k))-.k*.1.5*.vy)
+      let k = 0.6 in
+      fun balle -> (((dx/.r)*.(r-.cLen)*.(-.k))-.k*.1.2*.vx,((dy/.r)*.(r-.cLen)*.(-.k))-.k*.1.2*.vy)
     )
   else
     fun balle -> (0.,0.)
@@ -265,6 +253,13 @@ let rec wait n =
   Graphics.synchronize ()*)
 ;;
 
+let ajoutForceCorde corde balle liste=
+  if isCordeTendue balle corde then
+    (calculForceCorde corde balle)::liste
+  else
+    liste
+;;
+  
 
 let bob= {id = 1 ; pos = (200.0,10.0) ; contact =  (fun balle (x,y) -> (((snd balle.position)-.30.0<y) && (((fst balle.position)> x-.50.0)&&((fst balle.position)<x+.50.0))))  ; force = (fun balle -> (balle.position <- (fst balle.position,(snd balle.position)+.(-.snd balle.vitesse*.2.))) ;(0.0,(-.2.0)*.(snd balle.vitesse))); draw = (fun (x,y)-> (draw_rect ((int_of_float x)-50) (int_of_float y) 100 2))};;
 
@@ -280,16 +275,20 @@ let rec game balle =
   Graphics.clear_graph ();
   checkCordeState cordeNo1 balle;
   checkCordeState cordeNo2 balle;
-  if(isCordeTendue balle cordeNo1)
+  let liste = get_list_force listeDeProps balle in
+  let liste1 = ajoutForceCorde cordeNo1 balle liste in
+  let liste2 = ajoutForceCorde cordeNo2 balle liste1 in
+  (*if(isCordeTendue balle cordeNo1)
   then
     if (isCordeTendue balle cordeNo2)
     then
-      nextFrame balle ((calculForceCorde cordeNo1 balle)::(calculForceCorde cordeNo2 balle)::(get_list_force listeDeProps balle))
+      nextFrame balle ((calculForceCorde cordeNo2 balle)::(calculForceCorde cordeNo1 balle)::(get_list_force listeDeProps balle))
     else
       nextFrame balle ((calculForceCorde cordeNo1 balle)::(get_list_force listeDeProps balle))
   else 
     nextFrame balle (get_list_force listeDeProps balle);
-  
+   *)
+  nextFrame balle liste2;
   let(x,y) = balle.position in 
   let(vx,vy) = balle.vitesse in 
   let(cx,cy) = cordeNo1.origine in
