@@ -268,12 +268,11 @@ let gravite= {id = 0 ; pos = (-.1.0,-.1.0) ; contact = (fun balle (x,y) ->true) 
 let balle =  {position=(150.0,300.0);vitesse=(0.0,-0.05);masse=1.0;taille=ball};;
 let listeDeProps = [gravite];;
 let sharedCut =  {isCut=false;isOver=false};;
-let m = Mutex.create ();;
 let cordeNo1 = {origine = (200.0,200.0); longueur = 85.0; state = 0};;
 let cordeNo2 = {origine = (120.,210.); longueur = 85.;state = 0};;
 
 exception End;;
-
+(*
 let exeThread () =
   Format.printf "Thread lancé\n@.";
   let traitementKeyP key =
@@ -329,10 +328,7 @@ let exeThread () =
            Mutex.unlock m)
   
 ;;
-  
-  
-  
-let t = Thread.create (exeThread) ();;
+  *)
 
 let rec game balle =
   Graphics.clear_graph ();
@@ -350,15 +346,19 @@ let rec game balle =
   draw_ball (int_of_float x) (int_of_float y) ( balle.taille);
   affichageCorde cordeNo1 balle;
   affichageCorde cordeNo2 balle;
+  if (Graphics.key_pressed()) then
+    (
+      let c = Graphics.read_key () in
+      if c = 'q' then
+        sharedCut.isOver <- true
+    );
   
   
-  wait 500000;
+(*  let _ = Unix.select [] [] [] 0.1 in*)wait 500000;
   try  
-    (*Printf.printf "\n BEF y: %f vy : %f  \n" y vy ;*)
-    if(Mutex.try_lock m) then(
+    (
       if sharedCut.isOver then
         raise End;
-      Mutex.unlock m;
       game balle
     )
   with

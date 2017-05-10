@@ -5,3 +5,4 @@
 **/#*
 #building and compilation files
 **/*.cmo
+**/*.cmi
