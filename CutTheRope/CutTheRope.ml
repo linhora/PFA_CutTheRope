@@ -265,6 +265,7 @@ let bob= {id = 1 ; pos = (200.0,10.0) ; contact =  (fun balle (x,y) -> (((snd ba
 
 let gravite= {id = 0 ; pos = (-.1.0,-.1.0) ; contact = (fun balle (x,y) ->true) ; force = (fun balle -> (0.0,-.0.005)); draw = (fun (x,y)-> ())};;
 
+let balle =  {position=(150.0,300.0);vitesse=(0.0,-0.05);masse=1.0;taille=ball};;
 let listeDeProps = [gravite];;
 let sharedCut =  {isCut=false;isOver=false};;
 let m = Mutex.create ();;
@@ -278,6 +279,30 @@ let exeThread () =
     if key = 'q' then
       raise End
   in
+  let detecterCut x1 y1 x2 y2 corde=
+    Mutex.lock m;
+    let (xa,ya)=balle.position in
+    let (xb,yb)=corde.origine in
+    if (x1=x2) then(
+      if (xa<=x1&&xb>=x1)||(xa>=x1&&xb<=x1) then
+        toggleState corde
+    )else
+      if (xa=xb) then(
+        if (x1<=xa&&x2>=xa)||(x1>=xa&&x2<=xa) then
+          toggleState corde
+      );
+    let a1 = (y2-.y1)/.(x2-.x1) in
+    let a2 = (yb-.ya)/.(xb-.xa) in
+    let b1 = y1-.(a1*.x1) in
+    let b2 = ya-.(a2*.xa)in
+    if (a1<>a2) then (
+      let xcom = (b2-.b1)/.(a1-.a2) in
+      if (xcom<=x1&&xcom>=x2&&xcom<=xa&&xcom>=xb)||(xcom<=x2&&xcom>=x1&&xcom<=xa&&xcom>=xb)||(xcom<=x1&&xcom>=x2&&xcom<=xb&&xcom>=xa)||(xcom<=x2&&xcom>=x1&&xcom<=xb&&xcom>=xa) then
+        toggleState corde
+    );
+    Mutex.unlock m
+  in
+  
   try
     while true do
       try
@@ -285,7 +310,14 @@ let exeThread () =
         if (s.Graphics.keypressed) then (traitementKeyP s.Graphics.key)
         else
           if s.Graphics.button
-          then ()
+          then (
+            let (x1,y1) = (float_of_int s.Graphics.mouse_x,float_of_int s.Graphics.mouse_y) in
+            Printf.printf "waiting clic out";
+            let s2 = Graphics.wait_next_event [Graphics.Button_up] in
+            let (x2,y2) = (float_of_int s.Graphics.mouse_x,float_of_int s.Graphics.mouse_y) in
+            detecterCut x1 y1 x2 y2 cordeNo1;
+            detecterCut x1 y1 x2 y2 cordeNo2;
+          )
       with
         End -> raise End
        |e -> Printf.printf "exception non traitée levée"
@@ -320,7 +352,7 @@ let rec game balle =
   affichageCorde cordeNo2 balle;
   
   
-  wait 700000;
+  wait 100000;
   try  
     (*Printf.printf "\n BEF y: %f vy : %f  \n" y vy ;*)
     Mutex.try_lock m;
@@ -334,6 +366,6 @@ let rec game balle =
 ;;
 
 
-game {position=(150.0,300.0);vitesse=(0.0,-0.05);masse=1.0;taille=ball};;
+game balle;;
 
 
