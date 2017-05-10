@@ -1,36 +1,54 @@
 open Graphics;;
 open Unix;;  
-  
 
 let ball = 15;;
 let mass = 0.005;;
 let bounce= 0.7;;
 let maxVelocity= 15.0;;
   
-open_graph " 900x800"
-;;
-  
-Graphics.auto_synchronize false
-;;
-  
-Graphics.set_line_width 2
-;;
-Graphics.set_color black
-;;
+open_graph " 900x800" ;;
+Graphics.auto_synchronize false ;;
+Graphics.set_line_width 2 ;;
+Graphics.set_color black ;;
 
 type balle = {mutable position : float*float;mutable vitesse : float*float;masse : float; taille : int};; 
 
-type props = {id : int ; mutable pos : float*float ; contact :  (balle -> (float*float) -> bool) ; force : balle -> (float*float); draw : float*float -> unit};; 
 
-let evalForces balle listForces = 
+type props = {
+			  id            : int 
+			; mutable pos   : float*float 
+			; contact       : balle -> props -> bool 
+			; force         : balle -> props -> (float*float)
+			; draw 	        : balle -> props -> unit
+			; size          : int
+			; mutable state : int
+			};; 
+
+let rec draw_props balle listProps=
+		match listProps with
+		[]  -> ()
+		| p::r -> 	(p.draw balle (p));draw_props balle r;
+;;
+
+let rec wait n = 
+  if n=0 then Graphics.synchronize () else wait (n-1)
+;;
+
+
+let evalForces balle listProp = 
   begin
-    let rec evaluation balle = function 
+  
+    let rec evaluation balle list = match list with 
       |[] -> []
-      |f :: [] -> f balle :: []
-      |f :: l -> f balle :: evaluation balle l
+      |f :: l -> 
+		if (f.contact balle f) then 
+			f.force balle f :: evaluation balle l 
+		else 
+			(0.,0.) :: evaluation balle l
     in
-    evaluation balle listForces 
+    evaluation balle listProp 
 end ;;
+
 let rec sommeForceX forcesCalcules  = 
   match forcesCalcules with  
   |[]->0.0
@@ -43,8 +61,8 @@ let rec sommeForceY forcesCalcules =
   |(_,y)::l->y+.sommeForceY l
 ;;
     
-let nextFrame balle listForces =
-  let forcesCalcules = evalForces balle listForces in
+let nextFrame balle listProps =
+  let forcesCalcules = evalForces balle listProps in
   let acceleration = ((sommeForceX forcesCalcules) /. balle.masse,(sommeForceY forcesCalcules) /. balle.masse) in
   let (ax,ay) = acceleration in
   let (vx,vy) = balle.vitesse in
@@ -53,79 +71,44 @@ let nextFrame balle listForces =
   balle.position <- (x+.vx,y+.vy);
 ;;
 
-
-
-
 let draw_ball x y size =
 	fill_circle x y size
 ;;
 
-
-;;
-
-(*
-let new_speed (vx,vy) (ax,ay) =
-	if(vy > -.maxVelocity)
-		then (vx+.ax,vy+.ay)
-	else
-		(vx+.ax,vy+.ay)
-;;
-
-let new_position (bx,by) (vx,vy) =
-	(bx+.vx,by+.vy)
-;;
-
-
-let detect_bounce (bx,by) (vx,vy) =
-	if by -. float_of_int ball/.2.0 < 1.0
-		then  (vx,(vy*. -.0.8))
-	else
-		(vx,vy)
-;;
-
-
-let detect_bounce2 (bx,by) (vx,vy) platfrom =
-	if by -. float_of_int ball <= 0.0
-		then  ((bx+.(vx*.(abs_float (by-.(float_of_int ball))/.vy)),(float_of_int ball)+.((vy*. -.bounce)*.(abs_float (by-.(float_of_int ball))/.vy))),(vx,(vy*. -.bounce)))
-	else
-	((bx,by),(vx,vy))
-;;
-*)
-
-
-type corde = {origine : float*float; longueur : float; mutable state : int};;
-
-let toggleState corde =
-  corde.state <- corde.state+1 ;
-  ()
-;;
+(***********************************************************************)
 
 let isInCercle balle (cx,cy) longueur =
   let (bx,by) = balle.position in
   sqrt ((bx-.cx)**2.0+.(by-.cy)**2.0) <= longueur
 ;;
   
-       
-let isCordeTendue balle corde =
+let isCordeTendue balle prop =
   let (bx,by) = balle.position in
-  let (cx,cy) = corde.origine in
-  sqrt ((bx-.cx)**2.0+.(by-.cy)**2.0) >= corde.longueur
+  let (cx,cy) = prop.pos in
+  
+  if sqrt ((bx-.cx)**2.0+.(by-.cy)**2.0) >= (float_of_int prop.size)
+  then
+	(true)
+  else
+	(if prop.state = 0 then
+		prop.state <- 1;
+	false)
 ;;
 
-let calculForceCorde corde balle =
-  if corde.state = 1 then
+let calculForceCorde balle prop =
+  if prop.state = 1 then
     (
       let (bx,by) = balle.position in
-      let (cx,cy) = corde.origine in
+      let (cx,cy) = prop.pos in
       let (dx,dy)=(cx-.bx,cy-.by) in
-      let r = corde.longueur in
+      let r = (float_of_int prop.size) in
       let (vx,vy)= balle.vitesse in
       let cLen=sqrt ((cx-.bx)**2.+.(cy-.by)**2.) in
       let k = 0.6 in
-      fun balle -> (((dx/.r)*.(r-.cLen)*.(-.k))-.k*.1.2*.vx,((dy/.r)*.(r-.cLen)*.(-.k))-.k*.1.2*.vy)
+      (((dx/.r)*.(r-.cLen)*.(-.k))-.k*.1.2*.vx,((dy/.r)*.(r-.cLen)*.(-.k))-.k*.1.2*.vy)
     )
   else
-    fun balle -> (0.,0.)
+    (0.,0.)
 ;;
 
 let drawLine (ax,ay) (bx,by) =
@@ -134,28 +117,28 @@ let drawLine (ax,ay) (bx,by) =
   Graphics.lineto (int_of_float bx) (int_of_float by); 
 ;;
   
-let drawCorde corde balle =
+let drawCorde balle prop =
   (*Printf.printf "Draw call\n";*)
-  let (x1,y1) = corde.origine in
+  let (x1,y1) = prop.pos in
   let (x2,y2) = balle.position in
   let (cx,cy) = (x1,y1) in
   let (bx,by) = (x2,y2) in
   let (r,s) = if (cx<bx) then (cx,cy) else (bx,by) in
   let (u,w) = if (cx>=bx) then (cx,cy) else (bx,by) in
-  if corde.longueur**2. < ((r-.u)**2. +. (s-.w)**2.) then (drawLine (cx,cy) (bx,by);)
+  if (float_of_int prop.size)**2. < ((r-.u)**2. +. (s-.w)**2.) then (drawLine (cx,cy) (bx,by);)
   else (
     if bx=cx then drawLine (cx,cy) (bx,by)
     else (
       let rec solveZ z =
-        if ((sinh z )/.z)>=((sqrt (corde.longueur*.corde.longueur-.(w-.s)*.(w-.s)))/.(u-.r))
+        if ((sinh z )/.z)>=((sqrt ((float_of_int prop.size)*.(float_of_int prop.size)-.(w-.s)*.(w-.s)))/.(u-.r))
         then z
         else solveZ (z+.0.001)
       in
       let z = solveZ 0.001 in
       (*Printf.printf "z %f" z;*)
       let a = (u-.r)/.2./.z in
-      let p = (r+.u-.a*.log ((corde.longueur+.w-.s)/.(corde.longueur-.w+.s)))/.2. in
-      let q = (w+.s-.corde.longueur*.(cosh z)/.(sinh z))/.2. in
+      let p = (r+.u-.a*.log (((float_of_int prop.size)+.w-.s)/.((float_of_int prop.size)-.w+.s)))/.2. in
+      let q = (w+.s-.(float_of_int prop.size)*.(cosh z)/.(sinh z))/.2. in
       let rec drawSegment x y =
         if (floor x=floor u) then (Graphics.lineto (int_of_float x) (int_of_float y);())
 	else (
@@ -169,149 +152,168 @@ let drawCorde corde balle =
   )
          
 ;;
-  
 
-
-let affichageCorde corde balle =
-  let (x,y) = corde.origine in
+let affichageCorde balle prop =
+  let (x,y) = prop.pos in
   Graphics.draw_circle (int_of_float x) (int_of_float y) 2;
-  if corde.state = 0 then
-    Graphics.draw_circle (int_of_float x) (int_of_float y) (int_of_float corde.longueur)
-  else (if corde.state = 1 then
-          drawCorde corde balle
+  if prop.state = 0 then
+    Graphics.draw_circle (int_of_float x) (int_of_float y) (prop.size)
+  else (if prop.state = 1 then
+          drawCorde balle prop
         else
           ())
 ;;
 
+(****************************************************************************)
 
-let checkCordeState corde balle =
-  if corde.state = 0 && (isInCercle balle corde.origine corde.longueur) then
-    toggleState corde
-  else
-    ()
+let rec bob={
+		     id        = 1 
+			 ; pos     = (150.0,10.0) 
+			 ; contact =  (fun balle bob -> (((snd balle.position)-.30.0<(snd bob.pos)) && (((fst balle.position)> (fst bob.pos)-.50.0)&&((fst balle.position)<(fst bob.pos)+.50.0))))  
+			 ; force   = (fun balle bob-> (balle.position <- (fst balle.position,(snd balle.position)+.(-.snd balle.vitesse*.2.))) ;(0.0,(-.2.0)*.(snd balle.vitesse)))
+			 ; draw    = (fun balle bob-> (draw_rect ((int_of_float (fst bob.pos))-50) (int_of_float (snd bob.pos)) 100 2))
+			 ; size    = 100
+			 ; state   = 1
+		    };;
+
+let rec gravite={
+			 	 id        = 0 
+			 	 ; pos     = (-.1.0,-.1.0) 
+			 	 ; contact = (fun balle gravite ->true) 
+			 	 ; force   = (fun balle gravite-> (0.0,-.0.005))
+			 	 ; draw    = (fun balle gravite-> ())
+			 	 ; size    = 0
+			 	 ; state   = 1
+			    };;
+
+let corde1={
+			id        = 2 
+			; pos     = (200.0,200.0) 
+			; contact =  (isCordeTendue)  
+			; force   = (calculForceCorde)
+			; draw    = (affichageCorde)
+			; size    = 185
+			; state   = 0
+		   };;
+
+let corde2={
+			id        = 2 
+			; pos     = (100.0,210.0) 
+			; contact =  (isCordeTendue)  
+			; force   = (calculForceCorde)
+			; draw    = (affichageCorde)
+			; size    = 85
+			; state   = 0
+		   };;
+
+let listeDeProps = [bob;gravite;corde1;corde2];;
+
+(*****************************************************************************)
+
+
+let rec print_list l = match l with
+ |[] -> ()
+ |e::f -> print_int e; print_string " "; print_list f;;
+
+let explode s =
+  let rec exp i l =
+    if i < 0 then l else exp (i - 1) (s.[i] :: l) in
+  exp (String.length s - 1) [];;
+
+
+
+let createGravity list =
+	{
+ 	 id        = 0 
+	 ; pos     = if (List.length list ) > 2 then (float_of_int(List.nth list 1),float_of_int(List.nth list 2)) else (0.,0.)
+ 	 ; contact = (fun balle gravite ->true) 
+	 ; force   = (fun balle gravite-> (0.0,-.0.005))
+	 ; draw    = (fun balle gravite-> ())
+	 ; size    = if (List.length list ) > 3 then (List.nth list 3) else 0
+	 ; state   = if (List.length list ) > 4 then (List.nth list 4) else 1
+    }
 ;;
-  
-(*
-    Printf.printf "0 r:%f s:%f u:%f v:%f l:%f" r s u v corde.longueur;
-    let z = calculConstanteCat (r,s) (u,v) corde.longueur in
-    Printf.printf "1";
-    let a = (u-.r)/.2.0/.z in
-    Printf.printf "2";
-    let p = (r+.u-.a*. (log ((corde.longueur +.v-.s)/.(corde.longueur -.v+.s))) )/.2.0 in
-    Printf.printf "3";
-    let q = (v+.s-.corde.longueur*.(sinh z))/.2.0 in
-    Printf.printf "4";
-    for x = (int_of_float r)+1 to (int_of_float u)-1 do (
-      Printf.printf "";
-      fill_circle x (int_of_float (a*.cosh ((float_of_int x-.p)/.a)+.q)) 2 ;
-      Printf.printf "";)
-    done *)
 
-
-
-(*************)
-
-
-
-let rec get_list_force listProps balle=
-		match listProps with
-		[]  -> []
-		| p::r -> 	if p.contact balle (fst p.pos,snd p.pos)  
-						then p.force :: get_list_force r balle
-					else
-						get_list_force r balle;
+let createbouncer list =
+	{
+     id        = 1 
+	 ; pos     = if (List.length list ) > 2 then (float_of_int(List.nth list 1),float_of_int(List.nth list 2)) else (100.,100.)  
+	 ; contact =  (fun balle bob -> (((snd balle.position)-.30.0<(snd bob.pos)) && (((fst balle.position)> (fst bob.pos)-.50.0)&&((fst balle.position)<(fst bob.pos)+.50.0))))  
+	 ; force   = (fun balle bob-> (balle.position <- (fst balle.position,(snd balle.position)+.(-.snd balle.vitesse*.2.))) ;(0.0,(-.2.0)*.(snd balle.vitesse)))
+	 ; draw    = (fun balle bob-> (draw_rect ((int_of_float (fst bob.pos))-50) (int_of_float (snd bob.pos)) 100 2))
+	 ; size    = if (List.length list ) > 3 then (List.nth list 3) else 0
+	 ; state   = if (List.length list ) > 4 then (List.nth list 4) else 1
+	}
+;;
 		
+let createRope list =
+	{
+	id        = 2 
+	; pos     = if (List.length list ) > 2 then (float_of_int(List.nth list 1),float_of_int(List.nth list 2)) else (0.,0.)
+	; contact =  (isCordeTendue)  
+	; force   = (calculForceCorde)
+	; draw    = (affichageCorde)
+	; size    = if (List.length list ) > 3 then (List.nth list 3) else 100
+	; state   = if (List.length list ) > 4 then (List.nth list 4) else 0
+   }
 ;;
 
+let rec createProps list =
+	if (List.length list ) > 0 then 
+		match (List.nth list 0) with
+		0 -> createGravity list
+		|1 -> createbouncer list
+		|2 -> createRope list
+		|_ -> {id=0;pos=(0.,0.);contact=(fun balle gravite ->true);force=(fun balle gravite->(0.,0.));draw=(fun balle gravite->());size=0;state=1}
 
+	else {id=0;pos=(0.,0.);contact=(fun balle gravite ->true);force=(fun balle gravite->(0.,0.));draw=(fun balle gravite->());size=0;state=1}
+;;
 
-let rec draw_props listProps=
-		match listProps with
-		[]  -> ()
-		| p::r -> 	p.draw (fst p.pos,snd p.pos);draw_props r;
+let rec lireF canal_entree =
+	
+	let ligne = input_line canal_entree in
+	
+	try
+		let x =List.map int_of_string (Str.split (Str.regexp "[^0-9]+") ligne) in
+		print_list x;
+		Printf.printf "\n" ;
+
+		createProps x :: lireF canal_entree;
 		
+	with End_of_file -> (close_in canal_entree;[])
 ;;
 
-let calc_acceleration =
-	(0.0,-.mass)
-;;
-(*
-let detect_bounce (bx,by) (vx,vy) =
-	if by -. float_of_int ball <= 0.0
-		then  ((bx+.(vx*.(abs_float (by-.(float_of_int ball))/.vy)),(float_of_int ball)+.((vy*. -.bounce)*.(abs_float (by-.(float_of_int ball))/.vy))),(vx,(vy*. -.bounce)))
-	else
-	((bx,by),(vx,vy))
-;;
-*)
-(*#####################################*)
 
-let rec wait n = 
-  if n=0 then Graphics.synchronize () else wait (n-1)
-  (*Printf.printf "TEST";
-  Unix.select [] [] [] (float_of_int n);
-  Printf.printf "TEST";
-  Graphics.synchronize ()*)
+let lireFichier fichier =
+	let canal_entree = open_in fichier in
+	lireF canal_entree;
 ;;
 
-let ajoutForceCorde corde balle liste=
-  if isCordeTendue balle corde then
-    (calculForceCorde corde balle)::liste
-  else
-    liste
-;;
-  
-
-let bob= {id = 1 ; pos = (200.0,10.0) ; contact =  (fun balle (x,y) -> (((snd balle.position)-.30.0<y) && (((fst balle.position)> x-.50.0)&&((fst balle.position)<x+.50.0))))  ; force = (fun balle -> (balle.position <- (fst balle.position,(snd balle.position)+.(-.snd balle.vitesse*.2.))) ;(0.0,(-.2.0)*.(snd balle.vitesse))); draw = (fun (x,y)-> (draw_rect ((int_of_float x)-50) (int_of_float y) 100 2))};;
-
-let gravite= {id = 0 ; pos = (-.1.0,-.1.0) ; contact = (fun balle (x,y) ->true) ; force = (fun balle -> (0.0,-.0.005)); draw = (fun (x,y)-> ())};;
-
-let listeDeProps = [gravite];;
+let listofProps = lireFichier "test.txt";;
+Printf.printf "%d \n" (List.length listofProps );;
 
 
-let cordeNo1 = {origine = (200.0,200.0); longueur = 85.0; state = 0};;
-let cordeNo2 = {origine = (120.,210.); longueur = 85.;state = 0};;
+(*****************************************************************************)
+
+
+
 let rec game balle =
 
   Graphics.clear_graph ();
-  checkCordeState cordeNo1 balle;
-  checkCordeState cordeNo2 balle;
-  let liste = get_list_force listeDeProps balle in
-  let liste1 = ajoutForceCorde cordeNo1 balle liste in
-  let liste2 = ajoutForceCorde cordeNo2 balle liste1 in
-  (*if(isCordeTendue balle cordeNo1)
-  then
-    if (isCordeTendue balle cordeNo2)
-    then
-      nextFrame balle ((calculForceCorde cordeNo2 balle)::(calculForceCorde cordeNo1 balle)::(get_list_force listeDeProps balle))
-    else
-      nextFrame balle ((calculForceCorde cordeNo1 balle)::(get_list_force listeDeProps balle))
-  else 
-    nextFrame balle (get_list_force listeDeProps balle);
-   *)
-  nextFrame balle liste2;
+
+  nextFrame balle listofProps;
+
   let(x,y) = balle.position in 
-  let(vx,vy) = balle.vitesse in 
-  let(cx,cy) = cordeNo1.origine in
-  draw_ball (int_of_float cx) (int_of_float cy) 1;
-  draw_props listeDeProps;
-  
+
+  draw_props balle listofProps;
   draw_ball (int_of_float x) (int_of_float y) ( balle.taille);
-  affichageCorde cordeNo1 balle;
-  affichageCorde cordeNo2 balle;
-  
   
   wait 700000;
-  
-  
-  (*Printf.printf "\n BEF y: %f vy : %f  \n" y vy ;*)
-  
-  
   
   game balle
        
 ;;
 
 
-game {position=(150.0,300.0);vitesse=(0.0,-0.05);masse=1.0;taille=ball};;
 
-
+game {position=(150.0,300.0);vitesse=(0.0,-0.0);masse=1.0;taille=ball};;
