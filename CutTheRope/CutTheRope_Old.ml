@@ -60,7 +60,9 @@ let abs_f x =
 
 let detect_bounce (bx,by) (vx,vy) =
 	if by -. float_of_int ball <= 0.0
-		then  ((bx+.(vx*.(abs_float (by-.(float_of_int ball))/.vy)),(float_of_int ball)+.((vy*. -.bounce)*.(abs_float (by-.(float_of_int ball))/.vy))),(vx,(vy*. -.bounce)))
+		then  
+		((bx+.(vx*.(abs_float (by-.(float_of_int ball))/.vy))
+		,(float_of_int ball)+.((vy*. -.bounce)*.(abs_float (by-.(float_of_int ball))/.vy))),(vx,(vy*. -.bounce)))
 	else
 	((bx,by),(vx,vy))
 ;;
