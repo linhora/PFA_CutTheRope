@@ -1,8 +1,11 @@
 open Graphics;;
 open Unix;;
+
 let ball = 15;;
 let mass = 0.5;;
 let bounce= 0.7;;
+
+
 
 let maxVelocity= 15.0;;
   
@@ -10,6 +13,10 @@ open_graph " 900x800" ;;
 Graphics.auto_synchronize false ;;
 Graphics.set_line_width 2 ;;
 Graphics.set_color black ;;
+
+type infoShared = {mutable isClick: bool;mutable isOver : bool;mutable clickOrigine : int * int;mutable clickActuel : int * int};;  
+
+let sharedCut =  {isClick=false;isOver=false;clickOrigine = (0,0);clickActuel = (0,0)};;
 
 type balle = {mutable position : float*float;mutable vitesse : float*float;masse : float; taille : int};; 
 
@@ -118,7 +125,9 @@ let calculForceCorde balle prop =
       let fY = -.dy*.k/.balle.masse +.(vy*.vy*.amortissement) in*)
       let fX = -.((min (k*.(cLen-.r)) 5.)-.(min (projectionVitesse*.projectionVitesse*.amortissement*.(cLen-.r)) 5.))*.cosAngleHorizontale in
       let fY = -.((min (k*.(cLen-.r)) 5.)-.(min (projectionVitesse*.projectionVitesse*.amortissement*.(cLen-.r)) 5.))*.cosAngleVerticale in
+(*
       Printf.printf "cLen-r %f cLen %f fx %f fy %f \n" (cLen-.r) cLen fX fY;
+*)
       balle.position <- ((cx+.(r-.0.5)*.cosAngleHorizontale),(cy+.(r-.0.5)*.cosAngleVerticale));
       (fX,fY)
     )
@@ -232,9 +241,9 @@ let toucheGoal balle prop =
     let circleDistanceY = abs_float (by -. (py+.((float_of_int prop.size)/.2.))) in
 	
     (px < bx && px +.(float_of_int prop.size)>bx) &&
-    (((circleDistanceX-.(float_of_int balle.taille)) <= (float_of_int prop.size/.2.)) ||
+    (((circleDistanceX-.(float_of_int balle.taille)) <= (float_of_int prop.size/.2.)) &&
     ((circleDistanceY-.(float_of_int balle.taille)) <= (float_of_int prop.size/.2.)) ||
-    (((((circleDistanceX -. ((float_of_int prop.size)/.2.))*.(circleDistanceX -. ((float_of_int prop.size)/.2.)))) +. ((circleDistanceY -. 1.)*.(circleDistanceY -. 1.))) <= ((float_of_int balle.taille)*.(float_of_int balle.taille))));
+    (((((circleDistanceX -. ((float_of_int prop.size)/.2.))*.(circleDistanceX -. ((float_of_int prop.size)/.2.)))) +. ((circleDistanceY -. (float_of_int prop.size/.2.))*.(circleDistanceY -. (float_of_int prop.size/.2.)))) <= ((float_of_int balle.taille)*.(float_of_int balle.taille))));
 ;;
 
 
@@ -244,7 +253,9 @@ let toucheGoal balle prop =
 let isInBubble balle prop =
   let (bx,by) = balle.position in
   let (px,py) = prop.pos in
+(*
   Printf.printf "dx %f dy %f \n" (sqrt ((bx-.px)**2.0+.(by-.py)**2.0)) 0.1 ;
+*)
   if  sqrt ((bx-.px)**2.0+.(by-.py)**2.0) <= (float_of_int prop.size)
   then
   (prop.state<-1;
@@ -262,9 +273,9 @@ let forceBublle balle prop =
 		prop.pos <- (bx,by);
 		if (snd balle.vitesse) <1.
 		then
-			(0.0,(0.02))
+			(((fst balle.vitesse)/.(abs_float(fst balle.vitesse))*. -.0.001),(0.02))
 		else
-			(0.,0.005))
+			(((fst balle.vitesse)/.(abs_float(fst balle.vitesse))*. -.0.001),0.005))
 	else
 		(
 		(0.,0.)
@@ -278,7 +289,16 @@ let drawBublle balle prop =
 	set_color (rgb 0 0 0);
 ;;
 
-
+let drawStar balle prop =
+	let (px,py) = prop.pos in
+	if prop.state=0 then 
+	(set_color (rgb 222 175 50);
+	draw_ball (int_of_float px) (int_of_float py) ( prop.size);
+	set_color (rgb 0 0 0))
+	else
+	()
+;;
+	
 (****************************************************************************)
 
 let rec print_list l = match l with
@@ -312,7 +332,7 @@ let createGoal list =
  	 id        = 1 
 	 ; pos     = if (List.length list ) > 2 then (float_of_int(List.nth list 1),float_of_int(List.nth list 2)) else (0.,0.)
  	 ; contact = (toucheGoal) 
-	 ; force   = (fun balle gravite-> (set_color (rgb 0 100 255);(0.,0.)))
+	 ; force   = (fun balle gravite-> (	Printf.printf "YOU WIN DOOD \n";(sharedCut.isOver <- true);(0.,0.)))
 	 ; draw    = (drawGoal)
 	 ; size    = if (List.length list ) > 3 then (List.nth list 3) else 100
 	 ; state   = if (List.length list ) > 4 then (List.nth list 4) else 1
@@ -344,9 +364,21 @@ let createBublle list =
 ;;
 	
 
-let createbouncer list =
+let createStar list =
 	{
      id        = 4 
+	 ; pos     = if (List.length list ) > 2 then (float_of_int(List.nth list 1),float_of_int(List.nth list 2)) else (100.,100.)  
+	 ; contact = (isInBubble)  
+	 ; force   = (fun balle gravite-> (0.,0.))
+	 ; draw    = (drawStar)
+	 ; size    = if (List.length list ) > 3 then (List.nth list 3) else 20
+	 ; state   = if (List.length list ) > 4 then (List.nth list 4) else 0
+	}
+;;
+
+let createbouncer list =
+	{
+     id        = 5 
 	 ; pos     = if (List.length list ) > 2 then (float_of_int(List.nth list 1),float_of_int(List.nth list 2)) else (100.,100.)  
 	 ; contact = (toucheBouncer)  
 	 ; force   = (forceBounce)
@@ -359,11 +391,6 @@ let createbouncer list =
 
 
 
-
-
-
-
-
 let rec createProps list =
 	if (List.length list ) > 0 then 
 		match (List.nth list 0) with
@@ -371,7 +398,8 @@ let rec createProps list =
 		|1 -> createGoal list
 		|2 -> createRope list
 		|3 -> createBublle list
-		|4 -> createbouncer list
+		|4 -> createStar list
+		|5 -> createbouncer list
 		|_ -> {id=0;pos=(0.,0.);contact=(fun balle gravite ->true);force=(fun balle gravite->(0.,0.));draw=(fun balle gravite->());size=0;state=1}
 
 	else {id=0;pos=(0.,0.);contact=(fun balle gravite ->true);force=(fun balle gravite->(0.,0.));draw=(fun balle gravite->());size=0;state=1}
@@ -383,8 +411,10 @@ let rec lireF canal_entree =
 	
 	try
 		let x =List.map int_of_string (Str.split (Str.regexp "[^0-9]+") ligne) in
+(*
 		print_list x;
 		Printf.printf "\n" ;
+*)
 
 		createProps x :: lireF canal_entree;
 		
@@ -396,12 +426,12 @@ let lireFichier fichier =
 	let canal_entree = open_in fichier in
 	lireF canal_entree;
 ;;
-type infoShared = {mutable isClick: bool;mutable isOver : bool;mutable clickOrigine : int * int;mutable clickActuel : int * int};;  
 
 let listofProps = lireFichier "test.txt";;
+(*
 Printf.printf "%d \n" (List.length listofProps );;
+*)
 
-let sharedCut =  {isClick=false;isOver=false;clickOrigine = (0,0);clickActuel = (0,0)};;
 (*****************************************************************************)
 exception End;;
 
@@ -452,6 +482,13 @@ let rec iterCutProps liste =
      end
 ;;
 
+
+let isOOB balle =
+	let (bx,by) = balle.position in
+	if(bx > 1500. || bx < -.100. || by > 1200. || by < -.100. )
+	then sharedCut.isOver <- true
+;;
+
 let sleep sec =
   let start = Unix.gettimeofday () in
   let rec delay t =
@@ -464,6 +501,7 @@ let sleep sec =
   
 let rec game balle =
   Graphics.clear_graph ();
+  isOOB balle;
   nextFrame balle listofProps;
   let(x,y) = balle.position in 
   draw_props balle listofProps;
@@ -476,20 +514,21 @@ let rec game balle =
     );
   if (not sharedCut.isClick) then
     if (Graphics.button_down()) then
-      (sharedCut.isClick <- true;
-       sharedCut.clickOrigine<- Graphics.mouse_pos());
+      (
+      sharedCut.isClick <- true;
+	  sharedCut.clickOrigine<- Graphics.mouse_pos()
+	  );
+  
   if ( sharedCut.isClick && (not (Graphics.button_down())) ) then
     (
-      sharedCut.clickActuel <- (Graphics.mouse_pos());
-      iterCutProps listofProps;
-      sharedCut.isClick <- false;
+    sharedCut.clickActuel <- (Graphics.mouse_pos());
+    iterCutProps listofProps;
+    sharedCut.isClick <- false;
     );
-  
-  
   
   (*sleep 0.05;
   Graphics.synchronize();*)
-  wait 700000;
+  wait 400000;
   try  
     (
       if sharedCut.isOver then
