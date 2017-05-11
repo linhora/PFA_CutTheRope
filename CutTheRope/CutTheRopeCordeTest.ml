@@ -23,6 +23,22 @@ type balle = {mutable position : float*float;mutable vitesse : float*float;masse
 
 type props = {id : int ; mutable pos : float*float ; contact :  (balle -> (float*float) -> bool) ; force : balle -> (float*float); draw : float*float -> unit};; 
 
+(*
+
+
+type props = {
+			  id : int 
+			; mutable pos : float*float 
+			; contact :  (balle -> (float*float) -> bool) 
+			; force : balle -> (float*float)
+			; draw : float*float -> unit
+			; size : int
+			; state : int
+			};; 
+
+
+*)
+
 let evalForces balle listForces = 
   begin
     let rec evaluation balle = function 
@@ -296,7 +312,41 @@ let bob= {id = 1 ; pos = (220.0,1.0) ; contact =  (fun balle (x,y) -> (((snd bal
 let gravite= {id = 0 ; pos = (-.1.0,-.1.0) ; contact = (fun balle (x,y) ->true) ; force = (fun balle -> (0.0,-.0.001)); draw = (fun (x,y)-> ())};;
 
 let listeDeProps = [gravite];;
+(*
+let bob={
+			id = 1 
+			; pos = (200.0,10.0) 
+			; contact =  (fun balle (x,y) -> (((snd balle.position)-.30.0<y) && (((fst balle.position)> x-.50.0)&&((fst balle.position)<x+.50.0))))  
+			; force = (fun balle -> (balle.position <- (fst balle.position,(snd balle.position)+.(-.snd balle.vitesse*.2.))) ;(0.0,(-.2.0)*.(snd balle.vitesse)))
+			; draw = (fun (x,y)-> (draw_rect ((int_of_float x)-50) (int_of_float y) 100 2))
+			; size = 100
+			; state = 1
+		};;
 
+let gravite={
+				id = 0 
+				; pos = (-.1.0,-.1.0) 
+				; contact = (fun balle (x,y) ->true) 
+				; force = (fun balle -> (0.0,-.0.005))
+				; draw = (fun (x,y)-> ())
+				; size = 0
+				; state = 1
+			};;
+
+let listeDeProps = [gravite];;
+
+let corde1={
+			id = 2 
+			; pos = (400.0,400.0) 
+			; contact =  (isCordeTendue)  
+			; force = ()
+			; draw = ()
+			; size = 175
+			; state = 0
+		};;
+
+
+*)
 
 let cordeNo1 = {origine = (200.0,200.0); longueur = 100.0; state = 1};;
 
