@@ -1,7 +1,7 @@
 open Graphics;;
 open Unix;;
 let ball = 15;;
-let mass = 0.005;;
+let mass = 0.5;;
 let bounce= 0.7;;
 
 let maxVelocity= 15.0;;
@@ -13,7 +13,7 @@ Graphics.set_color black ;;
 
 type balle = {mutable position : float*float;mutable vitesse : float*float;masse : float; taille : int};; 
 
-let balle = {position=(150.0,300.0);vitesse=(0.0,-0.0);masse=1.0;taille=ball};;
+let balle = {position=(200.0,200.0);vitesse=(0.0,0.0);masse=mass;taille=ball};;
   
 type props = {
 			  id            : int 
@@ -68,7 +68,7 @@ let nextFrame balle listProps =
   let (ax,ay) = acceleration in
   let (vx,vy) = balle.vitesse in
   let (x,y) = balle.position in
-  balle.vitesse <- (vx+.ax,vy+.ay);
+  balle.vitesse <- (min (vx+.ax) maxVelocity,min (vy+.ay) maxVelocity);
   balle.position <- (x+.vx,y+.vy);
 ;;
 
@@ -106,18 +106,20 @@ let calculForceCorde balle prop =
       let (vx,vy)= balle.vitesse in
       let r = (float_of_int prop.size) in
       let cLen=sqrt (((dx)*.(dx))+.((dy)*.(dy))) in
-      let tension = (r-.cLen)/.(cLen) in
-    (*((-.1.)*.tension*.(dx),(-.1.)*.tension*.(dy))*)
-      let angle = atan2 dy dx in
-      let cosAngle = cos angle in
-      let sinAngle = sin angle in
-      let k = 0.001 in                  
-      let amortissement = 0.05 in
+      (*let tension = (r-.cLen)/.(cLen) in*)
+      (*((-.1.)*.tension*.(dx),(-.1.)*.tension*.(dy))*)
+      let cosAngleVerticale = dy/.cLen  in
+      let cosAngleHorizontale = dx/.cLen in
+      let k = 1. in                  
+      let amortissement = 0.7 in
+      let produitScalaire = dx*.vx+.dy*.vy in
+      let projectionVitesse =  produitScalaire/.cLen in
       (*let fX = -.*.k/.balle.masse +.(vx*.vx*.amortissement) in
       let fY = -.dy*.k/.balle.masse +.(vy*.vy*.amortissement) in*)
-      let fX = -.k*.(cLen-.r)*.(sinAngle)-.((vx*.vx+.vy*.vy)*.amortissement*.sinAngle) in
-      let fY = -.k*.(cLen-.r)*.(cosAngle)-.((vx*.vx+.vy*.vy)*.amortissement*. cosAngle) in
-      Printf.printf "r %f cLen %f fx %f cos %f sin %f\n" r cLen fX (cosAngle) (sinAngle);
+      let fX = -.((min (k*.(cLen-.r)) 5.)-.(min (projectionVitesse*.projectionVitesse*.amortissement*.(cLen-.r)) 5.))*.cosAngleHorizontale in
+      let fY = -.((min (k*.(cLen-.r)) 5.)-.(min (projectionVitesse*.projectionVitesse*.amortissement*.(cLen-.r)) 5.))*.cosAngleVerticale in
+      Printf.printf "cLen-r %f cLen %f fx %f fy %f \n" (cLen-.r) cLen fX fY;
+      balle.position <- ((cx+.(r-.0.5)*.cosAngleHorizontale),(cy+.(r-.0.5)*.cosAngleVerticale));
       (fX,fY)
     )
   else
@@ -138,7 +140,7 @@ let drawCorde balle prop =
   let (bx,by) = (x2,y2) in
   let (r,s) = if (cx<bx) then (cx,cy) else (bx,by) in
   let (u,w) = if (cx>=bx) then (cx,cy) else (bx,by) in
-  if (float_of_int prop.size)**2. < ((r-.u)**2. +. (s-.w)**2.) then (drawLine (cx,cy) (bx,by);)
+  if (float_of_int prop.size)**2. <= ((r-.u)**2. +. (s-.w)**2.)+.200. then (drawLine (cx,cy) (bx,by);)
   else (
     if bx=cx then drawLine (cx,cy) (bx,by)
     else (
