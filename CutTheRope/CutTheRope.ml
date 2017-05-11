@@ -1,9 +1,8 @@
 open Graphics;;
 open Unix;;  
 
-let ball = 15;;
-let mass = 0.005;;
-let bounce= 0.7;;
+let ball = 20;;
+
 let maxVelocity= 15.0;;
   
 open_graph " 900x800" ;;
@@ -81,6 +80,7 @@ let isInCercle balle (cx,cy) longueur =
   let (bx,by) = balle.position in
   sqrt ((bx-.cx)**2.0+.(by-.cy)**2.0) <= longueur
 ;;
+
   
 let isCordeTendue balle prop =
   let (bx,by) = balle.position in
@@ -166,50 +166,106 @@ let affichageCorde balle prop =
 
 (****************************************************************************)
 
-let rec bob={
-		     id        = 1 
-			 ; pos     = (150.0,10.0) 
-			 ; contact =  (fun balle bob -> (((snd balle.position)-.30.0<(snd bob.pos)) && (((fst balle.position)> (fst bob.pos)-.50.0)&&((fst balle.position)<(fst bob.pos)+.50.0))))  
-			 ; force   = (fun balle bob-> (balle.position <- (fst balle.position,(snd balle.position)+.(-.snd balle.vitesse*.2.))) ;(0.0,(-.2.0)*.(snd balle.vitesse)))
-			 ; draw    = (fun balle bob-> (draw_rect ((int_of_float (fst bob.pos))-50) (int_of_float (snd bob.pos)) 100 2))
-			 ; size    = 100
-			 ; state   = 1
-		    };;
 
-let rec gravite={
-			 	 id        = 0 
-			 	 ; pos     = (-.1.0,-.1.0) 
-			 	 ; contact = (fun balle gravite ->true) 
-			 	 ; force   = (fun balle gravite-> (0.0,-.0.005))
-			 	 ; draw    = (fun balle gravite-> ())
-			 	 ; size    = 0
-			 	 ; state   = 1
-			    };;
+let circleRectTouch balle prop =
+	
+	let (bx,by) = balle.position in
+	let (px,py) = prop.pos in	
+	let circleDistanceX = abs_float (bx -. px+.((float_of_int prop.size)/.2.)) in
+    let circleDistanceY = abs_float (by -. (py-.1.)) in
 
-let corde1={
-			id        = 2 
-			; pos     = (200.0,200.0) 
-			; contact =  (isCordeTendue)  
-			; force   = (calculForceCorde)
-			; draw    = (affichageCorde)
-			; size    = 185
-			; state   = 0
-		   };;
+    (px < bx && px+.(float_of_int prop.size)>bx) &&
+    ((circleDistanceX <= (float_of_int balle.taille)) || (circleDistanceY <= (float_of_int balle.taille)) ||
+    (((((circleDistanceX -. ((float_of_int prop.size)/.2.))*.(circleDistanceX -. ((float_of_int prop.size)/.2.)))) +. ((circleDistanceY -. 1.)*.(circleDistanceY -. 1.))) <= ((float_of_int balle.taille)*.(float_of_int balle.taille))));
+;;
 
-let corde2={
-			id        = 2 
-			; pos     = (100.0,210.0) 
-			; contact =  (isCordeTendue)  
-			; force   = (calculForceCorde)
-			; draw    = (affichageCorde)
-			; size    = 85
-			; state   = 0
-		   };;
+let toucheBouncer balle prop =
+	circleRectTouch balle prop  
+;;
 
-let listeDeProps = [bob;gravite;corde1;corde2];;
+let forceBounce balle bob = 
+	
+	if (snd balle.vitesse) > 0.
+	then 
+		(
+		(balle.position <- (fst balle.position,(snd balle.position)-.(snd balle.vitesse*.2.)));
+		(0.0,(-.2.0)*.(snd balle.vitesse))
+		)
+	else
+		(
+		(balle.position <- (fst balle.position,(snd balle.position)+.(-.snd balle.vitesse*.2.)));
+		(0.0,(-.2.0)*.(snd balle.vitesse))
+		)
+;;
+	
+let drawBouncer balle bob = 
+	(draw_rect ((int_of_float (fst bob.pos))) (int_of_float (snd bob.pos)) (bob.size) 1)
+;;
 
-(*****************************************************************************)
 
+(***)
+
+let drawGoal balle bob = 
+	 set_color (rgb 22 225 100);
+	(fill_rect ((int_of_float (fst bob.pos))) (int_of_float (snd bob.pos)) (bob.size) (bob.size));
+	 set_color (rgb 0 0 0);
+;;
+
+let toucheGoal balle prop =
+	let (bx,by) = balle.position in
+	let (px,py) = prop.pos in	
+	let circleDistanceX = abs_float (bx -. px+.((float_of_int prop.size)/.2.)) in
+    let circleDistanceY = abs_float (by -. (py+.((float_of_int prop.size)/.2.))) in
+	
+    (px < bx && px +.(float_of_int prop.size)>bx) &&
+    (((circleDistanceX-.(float_of_int balle.taille)) <= (float_of_int prop.size/.2.)) ||
+    ((circleDistanceY-.(float_of_int balle.taille)) <= (float_of_int prop.size/.2.)) ||
+    (((((circleDistanceX -. ((float_of_int prop.size)/.2.))*.(circleDistanceX -. ((float_of_int prop.size)/.2.)))) +. ((circleDistanceY -. 1.)*.(circleDistanceY -. 1.))) <= ((float_of_int balle.taille)*.(float_of_int balle.taille))));
+;;
+
+
+(****)
+
+
+let isInBubble balle prop =
+  let (bx,by) = balle.position in
+  let (px,py) = prop.pos in
+  Printf.printf "dx %f dy %f \n" (sqrt ((bx-.px)**2.0+.(by-.py)**2.0)) 0.1 ;
+  if  sqrt ((bx-.px)**2.0+.(by-.py)**2.0) <= (float_of_int prop.size)
+  then
+  (prop.state<-1;
+  true
+  )
+  else
+  false
+;;
+
+let forceBublle balle prop = 
+	
+	if prop.state=1
+	then 
+		(let (bx,by) = balle.position in
+		prop.pos <- (bx,by);
+		if (snd balle.vitesse) <1.
+		then
+			(0.0,(0.02))
+		else
+			(0.,0.005))
+	else
+		(
+		(0.,0.)
+		)
+;;
+
+let drawBublle balle prop = 
+	let (px,py) = prop.pos in
+	set_color (rgb 222 25 100);
+	draw_circle (int_of_float px) (int_of_float py) ( prop.size);
+	set_color (rgb 0 0 0);
+;;
+
+
+(****************************************************************************)
 
 let rec print_list l = match l with
  |[] -> ()
@@ -219,6 +275,9 @@ let explode s =
   let rec exp i l =
     if i < 0 then l else exp (i - 1) (s.[i] :: l) in
   exp (String.length s - 1) [];;
+
+
+
 
 
 
@@ -234,18 +293,18 @@ let createGravity list =
     }
 ;;
 
-let createbouncer list =
+let createGoal list =
 	{
-     id        = 1 
-	 ; pos     = if (List.length list ) > 2 then (float_of_int(List.nth list 1),float_of_int(List.nth list 2)) else (100.,100.)  
-	 ; contact =  (fun balle bob -> (((snd balle.position)-.30.0<(snd bob.pos)) && (((fst balle.position)> (fst bob.pos)-.50.0)&&((fst balle.position)<(fst bob.pos)+.50.0))))  
-	 ; force   = (fun balle bob-> (balle.position <- (fst balle.position,(snd balle.position)+.(-.snd balle.vitesse*.2.))) ;(0.0,(-.2.0)*.(snd balle.vitesse)))
-	 ; draw    = (fun balle bob-> (draw_rect ((int_of_float (fst bob.pos))-50) (int_of_float (snd bob.pos)) 100 2))
-	 ; size    = if (List.length list ) > 3 then (List.nth list 3) else 0
+ 	 id        = 1 
+	 ; pos     = if (List.length list ) > 2 then (float_of_int(List.nth list 1),float_of_int(List.nth list 2)) else (0.,0.)
+ 	 ; contact = (toucheGoal) 
+	 ; force   = (fun balle gravite-> (set_color (rgb 0 100 255);(0.,0.)))
+	 ; draw    = (drawGoal)
+	 ; size    = if (List.length list ) > 3 then (List.nth list 3) else 100
 	 ; state   = if (List.length list ) > 4 then (List.nth list 4) else 1
-	}
+    }
 ;;
-		
+	
 let createRope list =
 	{
 	id        = 2 
@@ -258,12 +317,47 @@ let createRope list =
    }
 ;;
 
+let createBublle list =
+	{
+     id        = 3 
+	 ; pos     = if (List.length list ) > 2 then (float_of_int(List.nth list 1),float_of_int(List.nth list 2)) else (100.,100.)  
+	 ; contact = (isInBubble)  
+	 ; force   = (forceBublle)
+	 ; draw    = (drawBublle)
+	 ; size    = if (List.length list ) > 3 then (List.nth list 3) else 30
+	 ; state   = if (List.length list ) > 4 then (List.nth list 4) else 0
+	}
+;;
+	
+
+let createbouncer list =
+	{
+     id        = 4 
+	 ; pos     = if (List.length list ) > 2 then (float_of_int(List.nth list 1),float_of_int(List.nth list 2)) else (100.,100.)  
+	 ; contact = (toucheBouncer)  
+	 ; force   = (forceBounce)
+	 ; draw    = (drawBouncer)
+	 ; size    = if (List.length list ) > 3 then (List.nth list 3) else 0
+	 ; state   = if (List.length list ) > 4 then (List.nth list 4) else 1
+	}
+;;
+
+
+
+
+
+
+
+
+
 let rec createProps list =
 	if (List.length list ) > 0 then 
 		match (List.nth list 0) with
 		0 -> createGravity list
-		|1 -> createbouncer list
+		|1 -> createGoal list
 		|2 -> createRope list
+		|3 -> createBublle list
+		|4 -> createbouncer list
 		|_ -> {id=0;pos=(0.,0.);contact=(fun balle gravite ->true);force=(fun balle gravite->(0.,0.));draw=(fun balle gravite->());size=0;state=1}
 
 	else {id=0;pos=(0.,0.);contact=(fun balle gravite ->true);force=(fun balle gravite->(0.,0.));draw=(fun balle gravite->());size=0;state=1}
@@ -305,8 +399,9 @@ let rec game balle =
 
   let(x,y) = balle.position in 
 
+ draw_ball (int_of_float x) (int_of_float y) ( balle.taille);
   draw_props balle listofProps;
-  draw_ball (int_of_float x) (int_of_float y) ( balle.taille);
+ 
   
   wait 700000;
   
@@ -316,4 +411,4 @@ let rec game balle =
 
 
 
-game {position=(150.0,300.0);vitesse=(0.0,-0.0);masse=1.0;taille=ball};;
+game {position=(280.0,300.0);vitesse=(0.0,0.4);masse=1.0;taille=ball};;
