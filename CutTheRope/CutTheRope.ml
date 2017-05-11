@@ -355,7 +355,9 @@ let rec game balle =
     if (Graphics.button_down()) then
       (sharedCut.isClick <- true;
       sharedCut.clickOrigine<- Graphics.mouse_pos());
-  if (sharedCut.isClick && 
+  if (sharedCut.isClick && !Graphics.button_down() ) then
+    sharedCut.clickActuel <- Graphics.mouse_pos();
+  
                              
   
 (*  let _ = Unix.select [] [] [] 0.1 in*)wait 500000;
