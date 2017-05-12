@@ -5,7 +5,7 @@ let ball = 15;;
 let mass = 0.5;;
 let bounce= 0.7;;
 
-
+let score = ref 0;;
 
 let maxVelocity= 15.0;;
   
@@ -20,7 +20,7 @@ let sharedCut =  {isClick=false;isOver=false;clickOrigine = (0,0);clickActuel = 
 
 type balle = {mutable position : float*float;mutable vitesse : float*float;masse : float; taille : int};; 
 
-let balle = {position=(200.0,200.0);vitesse=(0.0,0.0);masse=mass;taille=ball};;
+let balle = {position=(100.0,780.0);vitesse=(0.0,0.0);masse=mass;taille=ball};;
   
 type props = {
 			  id            : int 
@@ -123,12 +123,12 @@ let calculForceCorde balle prop =
       let projectionVitesse =  produitScalaire/.cLen in
       (*let fX = -.*.k/.balle.masse +.(vx*.vx*.amortissement) in
       let fY = -.dy*.k/.balle.masse +.(vy*.vy*.amortissement) in*)
-      let fX = -.((min (k*.(cLen-.r)) 5.)-.(min (projectionVitesse*.projectionVitesse*.amortissement*.(cLen-.r)) 5.))*.cosAngleHorizontale in
-      let fY = -.((min (k*.(cLen-.r)) 5.)-.(min (projectionVitesse*.projectionVitesse*.amortissement*.(cLen-.r)) 5.))*.cosAngleVerticale in
+      let fX = -.((min (k*.(cLen-.r)) 0.3)-.(min (projectionVitesse*.projectionVitesse*.amortissement*.(cLen-.r)) 0.2))*.cosAngleHorizontale in
+      let fY = -.((min (k*.(cLen-.r)) 0.3)-.(min (projectionVitesse*.projectionVitesse*.amortissement*.(cLen-.r)) 0.2))*.cosAngleVerticale in
 (*
       Printf.printf "cLen-r %f cLen %f fx %f fy %f \n" (cLen-.r) cLen fX fY;
 *)
-      balle.position <- ((cx+.(r-.0.5)*.cosAngleHorizontale),(cy+.(r-.0.5)*.cosAngleVerticale));
+      balle.position <- ((cx+.(r-.1.)*.cosAngleHorizontale),(cy+.(r-.1.)*.cosAngleVerticale));
       (fX,fY)
     )
   else
@@ -212,12 +212,12 @@ let forceBounce balle bob =
 	then 
 		(
 		(balle.position <- (fst balle.position,(snd balle.position)-.(snd balle.vitesse*.2.)));
-		(0.0,(-.2.0)*.(snd balle.vitesse))
+		(0.0,(-.1.0)*.(snd balle.vitesse))
 		)
 	else
 		(
 		(balle.position <- (fst balle.position,(snd balle.position)+.(-.snd balle.vitesse*.2.)));
-		(0.0,(-.2.0)*.(snd balle.vitesse))
+		(0.0,(-.1.0)*.(snd balle.vitesse))
 		)
 ;;
 	
@@ -237,15 +237,51 @@ let drawGoal balle bob =
 let toucheGoal balle prop =
 	let (bx,by) = balle.position in
 	let (px,py) = prop.pos in	
-	let circleDistanceX = abs_float (bx -. px+.((float_of_int prop.size)/.2.)) in
+	let circleDistanceX = abs_float (bx -. px-.((float_of_int prop.size)/.2.)) in
     let circleDistanceY = abs_float (by -. (py+.((float_of_int prop.size)/.2.))) in
 	
     (px < bx && px +.(float_of_int prop.size)>bx) &&
-    (((circleDistanceX-.(float_of_int balle.taille)) <= (float_of_int prop.size/.2.)) &&
-    ((circleDistanceY-.(float_of_int balle.taille)) <= (float_of_int prop.size/.2.)) ||
+    ((((circleDistanceX-.(float_of_int balle.taille)) <= (float_of_int prop.size/.2.)) &&
+    ((circleDistanceY-.(float_of_int balle.taille)) <= (float_of_int prop.size/.2.))) ||
     (((((circleDistanceX -. ((float_of_int prop.size)/.2.))*.(circleDistanceX -. ((float_of_int prop.size)/.2.)))) +. ((circleDistanceY -. (float_of_int prop.size/.2.))*.(circleDistanceY -. (float_of_int prop.size/.2.)))) <= ((float_of_int balle.taille)*.(float_of_int balle.taille))));
 ;;
 
+
+(****)
+
+
+
+let toucheBlower balle prop =
+	let (bx,by) = balle.position in
+	let (px,py) = prop.pos in
+	Printf.printf "TOUCHE? : %f %f %f %f %b \n" bx by px py (by> py && by < (py+.(float_of_int prop.size)) && (if prop.state = 1 then (bx>px)else (bx<px)));	
+	(by> py && by < (py+.(float_of_int prop.size)) && (if prop.state = 1 then (bx > px) else (bx < px) ))
+	
+;;
+
+let forceBlower balle prop = 
+	match prop.state with
+	1 ->(0.002,0.)
+	|_ ->(-.0.002,0.)
+;;
+
+let drawBlower balle prop = 
+	if prop.state = 1
+	then
+	(set_color (rgb 102 125 200);
+	(fill_rect ((int_of_float (fst prop.pos))) (int_of_float (snd prop.pos)) (20) (prop.size));
+	set_color (rgb 52 175 250);
+	(fill_rect ((int_of_float (fst prop.pos))) (int_of_float (snd prop.pos)) (10) (prop.size));
+	set_color (rgb 0 0 0);
+	(fill_rect ((int_of_float (fst prop.pos))) (int_of_float (snd prop.pos)) (1) (prop.size));)
+	else
+	(set_color (rgb 102 125 200);
+	(fill_rect ((int_of_float (fst prop.pos))) (int_of_float (snd prop.pos)) (20) (prop.size));
+	set_color (rgb 52 175 250);
+	(fill_rect ((int_of_float (fst prop.pos))+10) (int_of_float (snd prop.pos)) (10) (prop.size));
+	set_color (rgb 0 0 0);
+	(fill_rect ((int_of_float (fst prop.pos))+19) (int_of_float (snd prop.pos)) (1) (prop.size));)	
+;;
 
 (****)
 
@@ -256,7 +292,7 @@ let isInBubble balle prop =
 (*
   Printf.printf "dx %f dy %f \n" (sqrt ((bx-.px)**2.0+.(by-.py)**2.0)) 0.1 ;
 *)
-  if  sqrt ((bx-.px)**2.0+.(by-.py)**2.0) <= (float_of_int prop.size)
+  if  sqrt ((bx-.px)**2.0+.(by-.py)**2.0) <= (float_of_int prop.size) && prop.state <> 2
   then
   (prop.state<-1;
   true
@@ -264,6 +300,23 @@ let isInBubble balle prop =
   else
   false
 ;;
+
+let touchStar balle prop =
+  let (bx,by) = balle.position in
+  let (px,py) = prop.pos in
+(*
+  Printf.printf "dx %f dy %f \n" (sqrt ((bx-.px)**2.0+.(by-.py)**2.0)) 0.1 ;
+*)
+  if  sqrt ((bx-.px)**2.0+.(by-.py)**2.0) <= (float_of_int prop.size) && prop.state == 0
+  then
+  (prop.state<-1;
+  (score := !score+1);
+  true
+  )
+  else
+  false
+;;
+
 
 let forceBublle balle prop = 
 	
@@ -273,9 +326,9 @@ let forceBublle balle prop =
 		prop.pos <- (bx,by);
 		if (snd balle.vitesse) <1.
 		then
-			(((fst balle.vitesse)/.(abs_float(fst balle.vitesse))*. -.0.001),(0.02))
+			((copysign 1. (fst balle.vitesse)*. (-.0.001)),(0.02))
 		else
-			(((fst balle.vitesse)/.(abs_float(fst balle.vitesse))*. -.0.001),0.005))
+			((copysign 1. (fst balle.vitesse)*. (-.0.001)),0.005))
 	else
 		(
 		(0.,0.)
@@ -284,9 +337,10 @@ let forceBublle balle prop =
 
 let drawBublle balle prop = 
 	let (px,py) = prop.pos in
-	set_color (rgb 222 25 100);
+	if prop.state <> 2 then
+	(set_color (rgb 222 25 100);
 	draw_circle (int_of_float px) (int_of_float py) ( prop.size);
-	set_color (rgb 0 0 0);
+	set_color (rgb 0 0 0);)
 ;;
 
 let drawStar balle prop =
@@ -298,6 +352,8 @@ let drawStar balle prop =
 	else
 	()
 ;;
+	
+	
 	
 (****************************************************************************)
 
@@ -332,7 +388,7 @@ let createGoal list =
  	 id        = 1 
 	 ; pos     = if (List.length list ) > 2 then (float_of_int(List.nth list 1),float_of_int(List.nth list 2)) else (0.,0.)
  	 ; contact = (toucheGoal) 
-	 ; force   = (fun balle gravite-> (	Printf.printf "YOU WIN DOOD \n";(sharedCut.isOver <- true);(0.,0.)))
+	 ; force   = (fun balle gravite-> (	Printf.printf "YOU WIN DOOD score : %d \n" !score;(sharedCut.isOver <- true);(0.,0.)))
 	 ; draw    = (drawGoal)
 	 ; size    = if (List.length list ) > 3 then (List.nth list 3) else 100
 	 ; state   = if (List.length list ) > 4 then (List.nth list 4) else 1
@@ -368,7 +424,7 @@ let createStar list =
 	{
      id        = 4 
 	 ; pos     = if (List.length list ) > 2 then (float_of_int(List.nth list 1),float_of_int(List.nth list 2)) else (100.,100.)  
-	 ; contact = (isInBubble)  
+	 ; contact = (touchStar)  
 	 ; force   = (fun balle gravite-> (0.,0.))
 	 ; draw    = (drawStar)
 	 ; size    = if (List.length list ) > 3 then (List.nth list 3) else 20
@@ -383,12 +439,22 @@ let createbouncer list =
 	 ; contact = (toucheBouncer)  
 	 ; force   = (forceBounce)
 	 ; draw    = (drawBouncer)
-	 ; size    = if (List.length list ) > 3 then (List.nth list 3) else 0
+	 ; size    = if (List.length list ) > 3 then (List.nth list 3) else 50
 	 ; state   = if (List.length list ) > 4 then (List.nth list 4) else 1
 	}
 ;;
 
-
+let createBlower list =
+	{
+     id        = 6 
+	 ; pos     = if (List.length list ) > 2 then (float_of_int(List.nth list 1),float_of_int(List.nth list 2)) else (100.,100.)  
+	 ; contact = (toucheBlower)  
+	 ; force   = (forceBlower)
+	 ; draw    = (drawBlower)
+	 ; size    = if (List.length list ) > 3 then (List.nth list 3) else 0
+	 ; state   = if (List.length list ) > 4 then (List.nth list 4) else 1
+	}
+;;
 
 
 let rec createProps list =
@@ -400,6 +466,7 @@ let rec createProps list =
 		|3 -> createBublle list
 		|4 -> createStar list
 		|5 -> createbouncer list
+		|6 -> createBlower list
 		|_ -> {id=0;pos=(0.,0.);contact=(fun balle gravite ->true);force=(fun balle gravite->(0.,0.));draw=(fun balle gravite->());size=0;state=1}
 
 	else {id=0;pos=(0.,0.);contact=(fun balle gravite ->true);force=(fun balle gravite->(0.,0.));draw=(fun balle gravite->());size=0;state=1}
@@ -426,8 +493,14 @@ let lireFichier fichier =
 	let canal_entree = open_in fichier in
 	lireF canal_entree;
 ;;
+let param = 
+	if Array.length Sys.argv >1
+	then Sys.argv.(1)
+	else
+	"test.txt"
 
-let listofProps = lireFichier "test.txt";;
+let listofProps = lireFichier param;;
+
 (*
 Printf.printf "%d \n" (List.length listofProps );;
 *)
@@ -469,6 +542,28 @@ let detecterCut x1 y1 x2 y2 corde=
   ()
 ;;
 
+let detecterPop x1 y1 x2 y2 bulle = 
+	let (xa, ya) = bulle.pos in
+	let r = (float_of_int bulle.size) in
+	Printf.printf "r2 %f  dx2 %f dy2 %f %d\n" (r*.r) (((x1-.xa)*.(x1-.xa)+.(y1-.ya)*.(y1-.ya))) ((y1-.ya)*.(y1-.ya)) (bulle.state);
+	if ( ((x1-.xa)*.(x1-.xa)+.(y1-.ya)*.(y1-.ya)))< r*.r then (
+		(
+		Printf.printf "Pop";
+		bulle.state <- 2;)
+		)
+	else (
+		if (((x2-.xa)*.(x2-.xa)+.(y2-.ya)*.(y2-.ya)))< r*.r then
+			(
+			Printf.printf "Pop2";
+			bulle.state <- 2;
+			)
+		else
+		(
+		Printf.printf "Pas Pop \n";
+			())
+		)
+;;
+
 let rec iterCutProps liste =
   match liste with
     [] -> ()
@@ -476,8 +571,12 @@ let rec iterCutProps liste =
      begin
        let (x1,y1) = sharedCut.clickOrigine in
        let (x2,y2) = sharedCut.clickActuel in
-       if p.id = 2 && p.state = 1 then
-         detecterCut (float_of_int x1) (float_of_int y1) (float_of_int x2) (float_of_int y2) p;
+       if  (p.state = 1) then (
+		match p.id with
+			|3 -> detecterPop (float_of_int x1) (float_of_int y1) (float_of_int x2) (float_of_int y2) p;
+			|2 -> detecterCut (float_of_int x1) (float_of_int y1) (float_of_int x2) (float_of_int y2) p;
+			|_ -> (		Printf.printf "invalide :%d\n" p.id;);
+		);
        iterCutProps l
      end
 ;;
@@ -528,7 +627,7 @@ let rec game balle =
   
   (*sleep 0.05;
   Graphics.synchronize();*)
-  wait 400000;
+  wait 900000;
   try  
     (
       if sharedCut.isOver then
